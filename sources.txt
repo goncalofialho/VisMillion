@@ -1,0 +1,15 @@
+Seattle City -          https://data.seattle.gov/
+San Francisco City -    https://datasf.org/opendata/
+Austin City -           https://data.austintexas.gov/
+Chicago City -          https://data.cityofchicago.org/
+
+
+api - Socrata https://dev.socrata.com/
+
+https://www.datasciencecentral.com/profiles/blogs/big-data-sets-available-for-free - sites com datasets
+
+
+https://github.com/davidjamesmoss/django-csv-stream
+http://pythondata.com/working-large-csv-files-python/
+
+CSV BID - https://www.kaggle.com/datasets?sortBy=hottest&group=public&page=1&pageSize=20&size=large&filetype=all&license=all

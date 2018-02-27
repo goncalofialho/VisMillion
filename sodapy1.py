@@ -3,9 +3,9 @@ from sodapy import Socrata
 
 
 if __name__ == "__main__":
-    client = Socrata("data.sfgov.org", None)
+    client = Socrata("data.cityofchicago.org", None)
 
-    results = client.get("cuks-n6tp", limit=2000)
+    results = client.get("6zsd-86xi", limit=2000)
 
     results_df = pd.DataFrame.from_records(results)
 
