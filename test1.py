@@ -47,7 +47,7 @@ class EchoApplication(WebSocketApplication):
 if __name__ == '__main__':
     startedSending = False
     print("hello world")
-    fake = Faker();
+    fake = Faker()
     WebSocketServer(('', 8002), Resource(OrderedDict([('/', EchoApplication)]))).serve_forever()
     s = sched.scheduler(time.time, time.sleep)
 
