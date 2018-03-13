@@ -14,6 +14,16 @@ socket.on('pong', function(){
 })
 
 socket.on('message', function(data){
-    console.log(data)
-    $('.output').append('<p>'+data["names"]+'</p>')
+   // console.log(data)
+   // $('.output').append('<p>'+data["names"]+'</p>')
+})
+
+
+/* MANAGING DELAYS */
+function streamDelay(value){
+    socket.emit("delay", {delay: value});
+}
+
+socket.on('delay', function(data){
+    $('#delay span').text(data["value"])
 })

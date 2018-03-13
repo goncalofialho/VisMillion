@@ -5,7 +5,6 @@ from threading import Thread
 from faker import Faker
 from random import randint
 
-
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'secret!'
 socketio = SocketIO(app)
@@ -14,10 +13,11 @@ fake = Faker()
 
 class CountThread(Thread):
     """Stream data on Thread"""
-    delay = 0.2
+    delay = 1
 
     def __init(self):
         super(CountThread, self).__init__()
+        self.delay = 0.2
 
     def get_data(self):
         """ GET DATA AND EMIT TO SOCKET """
@@ -29,7 +29,13 @@ class CountThread(Thread):
             data = dict(names=name[:-3])
             socketio.send(data)
             count += 1
-            sleep(self.delay)
+            sleep(self.getDelay())
+
+    def getDelay(self):
+        return self.delay
+
+    def setDelay(self, value):
+        self.delay = value
 
     def run(self):
         """Default run method"""
@@ -49,10 +55,16 @@ def handle_pong(message):
     print("Ping data: " + message["data"])
     emit('pong', {"data": "Pong"})
 
+@socketio.on("delay")
+def update_delay(value):
+    print("Changing delay from: " + str(THREAD.getDelay()) + "s to "+value['delay'] + "s")
+    THREAD.setDelay(float(value['delay']))
+    emit('delay', {"value": THREAD.getDelay()})
 
 @socketio.on('message')
 def handle_message(message):
     print('received message: ' + message)
+
 
 """
 @socketio.on('connect')
@@ -73,6 +85,7 @@ def connect_socket():
         print("Started streaming")
         THREAD = CountThread()
         THREAD.start()
+        emit('delay', {"value": THREAD.getDelay()})
 
 
 if __name__ == '__main__':
