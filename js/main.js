@@ -26,9 +26,9 @@ function randomNumberBounds(min, max) {
 }
 
 function seedBarChart(){
-  var MAX_LENGTH = 50;
+  var MAX_LENGTH = 500;
   for(var i=0; i < MAX_LENGTH; i++){
-    barArr.push(randomNumberBounds(15,95))
+    barArr.push(randomNumberBounds(25,80))
   }
 }
 

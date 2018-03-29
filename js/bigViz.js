@@ -83,7 +83,9 @@ class Chart{
     }
 
     update(){
-
+      this.modules.forEach(function(el){
+        el.update()
+      })
     }
     findModule(index){
       return this.modules.find(function(el){
@@ -94,10 +96,17 @@ class Chart{
     changeModules(module1, module2){
       var mod1 = this.findModule(module1)
       var mod2 = this.findModule(module2)
+      var transitions = this.transitions
 
+      mod1.elements.forEach(function(el){
+        el.transition().duration(transitions).attr("transform","translate("+mod2.x1+",0)")
+      })
       mod1.axisBottom.transition().duration(this.transitions).attr("transform", "translate("+ mod2.x1 +"," + this.height + ")")
       mod1.axisLeft.transition().duration(this.transitions).attr("transform", "translate("+ mod2.x1 +",0)")
 
+      mod2.elements.forEach(function(el){
+        el.transition().duration(transitions).attr("transform","translate("+mod1.x1+",0)")
+      })
       mod2.axisBottom.transition().duration(this.transitions).attr("transform", "translate("+ mod1.x1 +"," + this.height + ")")
       mod2.axisLeft.transition().duration(this.transitions).attr("transform", "translate("+ mod1.x1 +",0)")
 
@@ -123,14 +132,15 @@ class Module{
     this.axisBottom
     this.axisLeft
     this.x1
-    this.elements = []
+    this.elements = {}
   }
 
   draw(){
     var svg = this.chart.svg
     var own_width = this.chart.width / this.chart.modules.length
-    this.x = d3.scaleTime().range([0, own_width])
+    this.x = d3.scaleLinear().range([0, own_width])
     this.x1 =  own_width * this.index
+
 
 
 
@@ -140,6 +150,15 @@ class Module{
       this.drawbarchart()
     else if(this.type=="scatterChart")
       this.drawscatterchart()
+  }
+
+  update(){
+    if(this.type=="linechart")
+      this.updatelinechart()
+    else if(this.type=="barchart")
+      this.updatebarchart()
+    else if(this.type=="scatterChart")
+      this.updatescatterchart()
   }
 
   drawlinechart(){
@@ -158,38 +177,70 @@ class Module{
 
   drawbarchart(){
     var svg = this.chart.svg
+    var own_width = this.chart.width / this.chart.modules.length
+    var xscale = d3.scaleLinear().domain([0,220] /* TODO: scales */ ).range([0, this.chart.width / this.chart.modules.length])
 
     /* EACH IDIOM HAS ITS OWN AXIS SCALE */
     this.y = d3.scaleLinear().domain([0,100] /* TODO: scales */ ).range([this.chart.height, 0])
     //console.log("BANDWIDTH: "+this.y.bandwidth())
 
+    this.x = d3.scaleLinear().domain([0,220]).range([0, own_width])
+
     this.axisBottom = svg.append("g")
           .attr("transform", "translate("+ this.x1 +"," + this.chart.height + ")")
           .call(d3.axisBottom(this.x)/*.ticks(0)*/)
 
+
     this.axisLeft = svg.append("g")
           .attr("transform", "translate("+ this.x1 +",0)")
           .call(d3.axisLeft(this.y)/*.ticks(0)*/)
+          .selectAll('.tick text')
+          .attr('transform', 'translate(30,0)')
+
+    this.axisLeft.selectAll('.tick line')
+          .attr('transform', 'translate(35,0)')
+
 
     var values = groupBarChart()
 
-    var bars = svg.append("g")
-    this.elements.push(bars)
+    var bars = svg.append("g").attr('id','bars')
+                  .attr("transform", "translate("+this.x1+",0)")
+    this.elements["bars"] = bars
 
     var bandwidth = this.chart.height / values.length ;
-
+    var height =  this.chart.height ;
+    var color = d3.scaleOrdinal(d3.schemeCategory10);
     bars.selectAll('.bar')
           .data(values)
         .enter().append('rect')
           .attr('class','bar')
-          .attr('x',0)
+          .attr('x',function(d){ return own_width - xscale(d)})
           .attr('height', bandwidth )
-          .attr('y', function(d,p){ return 440 - (p*bandwidth);})
-          .attr('width', function(d){return d * 10;})
+          .attr('y', function(d,p){ return (height - bandwidth) - (p*bandwidth);})
+          .transition()
+          .duration(300)
+          .attr('width', function(d){return xscale(d)})
+          .attr('fill', function(d,p) { return color(p)})
 
 
   }
   drawscatterchart(){
     var svg = this.chart.svg
+  }
+
+  updatebarchart(){
+    var values = groupBarChart()
+    var own_width = this.chart.width / this.chart.modules.length
+    var xscale = d3.scaleLinear().domain([0,220] /* TODO: scales */ ).range([0, this.chart.width / this.chart.modules.length])
+    var bandwidth = this.chart.height / values.length ;
+    var height =  this.chart.height ;
+    var color = d3.scaleOrdinal(d3.schemeCategory10);
+    var bars = this.elements["bars"]
+    bars.data(values)
+      .selectAll('.bar')
+        //  .transition()
+        //  .duration(300)
+          .attr('x',function(d){ return own_width - xscale(d)})
+          .attr('width',10/* function(d){return xscale(d)}*/)
   }
 }
