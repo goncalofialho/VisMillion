@@ -7,8 +7,11 @@ $(document).ready(function(){
 
 
     $("#init_button").on("click", function(){
-      for(var i = 0; i < parseInt($('.graph_init input').val()); i++)
+      //for(var i = 0; i < parseInt($('.graph_init input').val()); i++)
         obj.addModule("barchart")
+        obj.addModule("linechart")
+        obj.addModule("linechart")
+
       obj.draw()
       $("#init_button").attr('disabled', true)
       $('.graph_init input').attr('disabled', true)
@@ -31,6 +34,16 @@ function seedBarChart(){
     barArr.push(randomNumberBounds(25,80))
   }
 }
+
+function incrementBarChart(){
+  barArr.push(randomNumberBounds(30,70))
+}
+
+function barchartDemo(){
+  incrementBarChart()
+  obj.update()
+}
+
 
 function groupBarChart(){
   /* TODO : SCALES AND RANGES */

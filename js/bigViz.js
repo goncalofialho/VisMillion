@@ -59,7 +59,7 @@ class Chart{
 
     addModule(type){
       try{
-        if(this.availableIdioms.indexOf(type) > 0){
+        if(this.availableIdioms.indexOf(type) >= 0){
           this.modules.push(new Module(type, this, this.modules.length))
         }else{
           throw new Error("Type "+type+" not recognized")
@@ -98,13 +98,26 @@ class Chart{
       var mod2 = this.findModule(module2)
       var transitions = this.transitions
 
-      mod1.elements.forEach(function(el){
+      var elements1 = [], elements2 = []
+      elements1 = Object.keys(mod1.elements).map(function(key){
+         return mod1.elements[key];
+      });
+      elements2 = Object.keys(mod2.elements).map(function(key){
+         return mod2.elements[key];
+      });
+      console.log(elements1)
+      console.log(elements2)
+
+
+
+
+      elements1.forEach(function(el){
         el.transition().duration(transitions).attr("transform","translate("+mod2.x1+",0)")
       })
       mod1.axisBottom.transition().duration(this.transitions).attr("transform", "translate("+ mod2.x1 +"," + this.height + ")")
       mod1.axisLeft.transition().duration(this.transitions).attr("transform", "translate("+ mod2.x1 +",0)")
 
-      mod2.elements.forEach(function(el){
+      elements2.forEach(function(el){
         el.transition().duration(transitions).attr("transform","translate("+mod1.x1+",0)")
       })
       mod2.axisBottom.transition().duration(this.transitions).attr("transform", "translate("+ mod1.x1 +"," + this.height + ")")
@@ -162,17 +175,74 @@ class Module{
   }
 
   drawlinechart(){
+    // TODO: SEE thIS TUTORIAL https://bost.ocks.org/mike/path/
     var svg = this.chart.svg
 
-    /* EACH IDIOM HAS ITS OWN AXIS SCALE */
-    this.y = d3.scaleLinear().range([this.chart.height, 0])
+    var n = 40,
+      random = d3.randomNormal(0, .2),
+      data = d3.range(n).map(random)
+
+    this.x = d3.scaleLinear()
+      .domain([0, n - 1])
+      .range([0, this.chart.width / this.chart.modules.length])
+
+    this.y = d3.scaleLinear()
+      .domain([-1, 1])
+      .range([this.chart.height, 0])
+
+    var parent = this
+
+    var line = d3.line()
+        .x(function(d, i) { return parent.x(i); })
+        .y(function(d, i) { return parent.y(d); })
+
+
+    var linechart = svg.append("g").attr('id','linechart')
+                          .attr("transform", "translate("+this.x1+",0)")
+
+    this.elements["linechart"] = linechart
+
     this.axisBottom = svg.append("g")
-          .attr("transform", "translate("+ this.x1 +"," + this.chart.height + ")")
-          .call(d3.axisBottom(this.x)/*.ticks(0)*/)
+    .attr("class", "axis axis--x")
+    .attr("transform", "translate("+this.x1+"," + parent.y(0) + ")")
+    .call(d3.axisBottom(parent.x))
 
     this.axisLeft = svg.append("g")
-          .attr("transform", "translate("+ this.x1 +",0)")
-          .call(d3.axisLeft(this.y)/*.ticks(0)*/)
+    .attr("class", "axis axis--y")
+    .attr("transform", "translate("+this.x1+",0)")
+    .call(d3.axisLeft(parent.y));
+
+    linechart.append("defs").append("clipPath")
+        .attr("id", "clip")
+      .append("rect")
+        .attr("width", (this.chart.width / this.chart.modules.length))
+        .attr("height", this.chart.height)
+
+    linechart.append("g")
+        .attr("clip-path", "url(#clip)")
+      .append("path")
+        .datum(data)
+        .attr("class", "line")
+      .transition()
+        .duration(500)
+        .ease(d3.easeLinear)
+        .on("start", tick);
+
+    function tick() {
+      // Push a new data point onto the back.
+      data.push(random());
+      // Redraw the line.
+      d3.select(this)
+          .attr("d", line)
+          .attr("transform", null);
+      // Slide it to the left.
+      d3.active(this)
+          .attr("transform", "translate(" + parent.x(-1) + ",0)")
+        .transition()
+          .on("start", tick);
+      // Pop the old data point off the front.
+      data.shift();
+    }
   }
 
   drawbarchart(){
@@ -226,6 +296,7 @@ class Module{
   }
   drawscatterchart(){
     var svg = this.chart.svg
+
   }
 
   updatebarchart(){
@@ -236,11 +307,12 @@ class Module{
     var height =  this.chart.height ;
     var color = d3.scaleOrdinal(d3.schemeCategory10);
     var bars = this.elements["bars"]
-    bars.data(values)
+
+    bars.data( values)
       .selectAll('.bar')
-        //  .transition()
-        //  .duration(300)
-          .attr('x',function(d){ return own_width - xscale(d)})
-          .attr('width',10/* function(d){return xscale(d)}*/)
+          .transition()
+          .duration(100)
+          .attr('x',function(d,p){return own_width - xscale(values[p])})
+          .attr('width',function(d,p){return xscale(values[p])})
   }
 }
