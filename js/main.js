@@ -1,4 +1,4 @@
-var lineArr = [], barArr = [];
+var lineArr = [], barArr = [], scatterArr = [] ;
 seedBarChart()
 
 $(document).ready(function(){
@@ -10,7 +10,7 @@ $(document).ready(function(){
       //for(var i = 0; i < parseInt($('.graph_init input').val()); i++)
         obj.addModule("barchart")
         obj.addModule("linechart")
-        obj.addModule("linechart")
+        obj.addModule("scatterchart")
 
       obj.draw()
       $("#init_button").attr('disabled', true)
@@ -22,7 +22,12 @@ $(document).ready(function(){
 
 });
 
-
+function randomScatterValues(){
+  var MAX_LENGTH = 50;
+  for(var i=0; i < MAX_LENGTH; i++){
+    scatterArr.push([randomNumberBounds(0,100),randomNumberBounds(10,90),randomNumberBounds(0,10)])
+  }
+}
 
 function randomNumberBounds(min, max) {
   return Math.floor(Math.random() * (max-min+1)+min);

@@ -41,7 +41,7 @@ function createChart(margin, width, height){
 
 class Chart{
     constructor(width, height, margin){
-        this.availableIdioms = ["linechart", "barchart"]
+        this.availableIdioms = ["linechart", "barchart", "scatterchart"]
         this.width = width
         this.height = height
         this.margin = margin
@@ -161,7 +161,7 @@ class Module{
       this.drawlinechart()
     else if(this.type=="barchart")
       this.drawbarchart()
-    else if(this.type=="scatterChart")
+    else if(this.type=="scatterchart")
       this.drawscatterchart()
   }
 
@@ -204,7 +204,7 @@ class Module{
 
     this.axisBottom = svg.append("g")
     .attr("class", "axis axis--x")
-    .attr("transform", "translate("+this.x1+"," + parent.y(0) + ")")
+    .attr("transform", "translate("+this.x1+"," + this.chart.height + ")")
     .call(d3.axisBottom(parent.x))
 
     this.axisLeft = svg.append("g")
@@ -296,6 +296,80 @@ class Module{
   }
   drawscatterchart(){
     var svg = this.chart.svg
+    var own_width = this.chart.width / this.chart.modules.length
+    var parent = this
+
+    /* EACH IDIOM HAS ITS OWN AXIS SCALE */
+    this.y = d3.scaleLinear().domain([0,100] /* TODO: scales */ ).range([this.chart.height, 0])
+    //console.log("BANDWIDTH: "+this.y.bandwidth())
+
+    this.x = d3.scaleLinear().domain([0,100]).range([0, own_width])
+
+
+    randomScatterValues()
+    var scatterVals = svg.append("g").attr('id','scatter-values')
+                    .attr('transform','translate('+this.x1+',0)')
+
+    this.axisBottom = svg.append("g")
+          .attr("transform", "translate("+ this.x1 +"," + this.chart.height + ")")
+          .call(d3.axisBottom(this.x)/*.ticks(0)*/)
+
+    this.axisLeft = svg.append("g")
+          .attr("transform", "translate("+ this.x1 +",0)")
+          .call(d3.axisLeft(this.y)/*.ticks(0)*/)
+          .selectAll('.tick text')
+          .attr('transform', 'translate(30,0)')
+
+    scatterVals.append("defs").append("clipPath")
+        .attr("id", "clip")
+      .append("rect")
+        .attr("width", (this.chart.width / this.chart.modules.length))
+        .attr("height", this.chart.height)
+
+    this.elements["values"] = scatterVals
+    var color = d3.scaleOrdinal(d3.schemeCategory10);
+    scatterVals.append('g')
+        .attr('clip-path', 'url(#clip)')
+        .selectAll('.circles')
+          .data(scatterArr)
+        .enter().append('circle')
+          .attr('class','circles')
+          .attr('r',function(d){ return d[2] })
+          .attr("cx", function(d) {  return parent.x(d[0]) })
+          .attr("cy", function(d) {  return parent.y(d[1]) })
+          .attr('fill', function(d,p) { return color(p)} )
+        .transition()
+          .duration(500)
+          .ease(d3.easeLinear)
+          .on("start",tick)
+
+    function tick(){
+      //scatterArr.push([randomNumberBounds(0,100),randomNumberBounds(10,90),randomNumberBounds(0,10)])
+      var element = d3.select(this).data()[0]
+      var color = d3.scaleOrdinal(d3.schemeCategory10);
+
+      if(element[0]<0){
+        d3.select(this)
+        .attr("cy", function(d) {d[1]=randomNumberBounds(10,90);  return parent.y(d[1]) })
+          .transition()
+        .duration(0)
+        .attr('cx', function(d){d[0]=randomNumberBounds(105,120); return parent.x(d[0]) })
+        .on("end",tick)
+      }else{
+      d3.select(this)
+        .transition()
+          .duration(500)
+          .ease(d3.easeLinear)
+          .attr('cx', function(d){ d[0]-=2.5; return parent.x(d[0]) })
+          .on("end", tick)
+      }
+    }
+
+    function verifyScatterArr(){
+
+    }
+
+
 
   }
 
