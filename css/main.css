@@ -1,3 +1,7 @@
 #init_button{
   margin-left: 10px;
 }
+
+.selects select {
+  margin-right: 10px;
+}
