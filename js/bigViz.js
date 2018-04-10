@@ -291,7 +291,30 @@ class Module{
           .duration(300)
           .attr('width', function(d){return xscale(d)})
           .attr('fill', function(d,p) { return color(p)})
+        .transition()
+          .duration(500)
+          .ease(d3.easeLinear)
+          .on("start",tick)
 
+
+      function tick(){
+        /*d3.select(this)
+        .transition()
+        .duration(500)
+          .attr('x', function(d){ d+=randomNumberBounds(-10,10); return own_width - xscale(d)})
+          .attr('width', function(d){ return xscale(d)})
+        .on("end", tick)*/
+        //console.log(d3.select(this).data())
+        var element = d3.select(this).data()[0]
+        element += randomNumberBounds(-5,5)
+        element < 0 ? element = 0 : element
+        d3.select(this)
+          .transition()
+          .duration(500)
+          .attr('x', function(d){ d=element; return own_width - xscale(d)})
+          .attr('width', function(d){ d=element; return xscale(d)})
+          .on("end",tick)
+      }
 
   }
   drawscatterchart(){
