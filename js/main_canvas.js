@@ -38,9 +38,20 @@ $(document).ready(function(){
 
 function randomScatterValues(){
   var MAX_LENGTH = 50;
-  for(var i=0; i < MAX_LENGTH; i++){
-    scatterArr.push([randomNumberBounds(0,100),randomNumberBounds(0,100),randomNumberBounds(0,10)])
+  console.log("start random")
+  if (scatterArr.length == 0){
+    for(var i=0; i < MAX_LENGTH; i++){
+      scatterArr.push([randomNumberBounds(0,100),randomNumberBounds(0,100),randomNumberBounds(0,10)])
+    }
+  }else{
+    for(var i=0; i < scatterArr.length ; i++){
+      scatterArr[i] = [randomNumberBounds(0,100),randomNumberBounds(0,100),randomNumberBounds(0,10)]
+    }
+    for(var i=0; i < MAX_LENGTH; i++){
+      scatterArr.push([randomNumberBounds(0,100),randomNumberBounds(0,100),randomNumberBounds(0,10)])
+    }
   }
+  console.log("finish random")
 }
 
 function randomNumberBounds(min, max) {

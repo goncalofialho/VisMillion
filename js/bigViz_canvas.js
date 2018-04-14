@@ -31,19 +31,25 @@ class Chart{
 
         var scalex = this.x
         var scaley = this.y
-        this.updateCanvas(this.context, this.dataContainer, this)
+        this.updateCanvas()
 
 
 
     }
-    updateCanvas(context, dataContainer, chart){
+    updateCanvas(){
       randomScatterValues()
-      console.log(this)
-      var data =  scatterArr
-      var dataBinding = dataContainer.selectAll('custom.arc')
-            .data(data, function(d){ return d; })
+      console.log("UPDATING")
+      var context = this.context
+      var dataContainer = this.dataContainer
+      var chart = this
 
-      dataBinding.attr('size', 15)
+      var dataBinding = dataContainer.selectAll('custom.arc')
+            .data(scatterArr, function(d){ return d; })
+
+      dataBinding.attr('size', 8)
+    //            .transition()
+    //            .duration(1000)
+                .attr('size',15)
                 .attr('fillStyle', 'green')
 
       dataBinding.enter()
@@ -51,17 +57,23 @@ class Chart{
             .classed('arc',true)
             .attr('x',function(d){ return chart.x(d[0])})
             .attr('y',function(d){ return chart.y(d[1])})
-            .attr('radius',function(d){ return d[2]})
+            .attr('radius',8)
             .attr('fillStyle', 'red')
       dataBinding.exit()
+            .attr('size',8)
+    //        .transition()
+    //        .duration(1000)
             .attr('size',5)
             .attr('fillStyle','lightgrey')
 
-      this.drawCanvas(context, dataContainer)
+      this.drawCanvas()
     }
 
-    drawCanvas(context, dataContainer){
-      // clear canvas
+    drawCanvas(){
+      console.log("rendering")
+      var context = this.context
+      var dataContainer = this.dataContainer
+
       context.fillStyle = "#fff";
       context.rect(0,0,1160,440);
       context.fill();
@@ -77,6 +89,7 @@ class Chart{
         context.closePath();
 
       });
+      console.log("finish rendering")
 
     }
 
