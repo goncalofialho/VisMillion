@@ -4,7 +4,6 @@ var height = 400
 var obj;
 
 
-
 class Chart{
     constructor(width, height, margin){
         this.availableIdioms = ["linechart", "barchart", "scatterchart"]
@@ -31,67 +30,49 @@ class Chart{
 
         var scalex = this.x
         var scaley = this.y
-        this.updateCanvas()
-
-
 
     }
-    updateCanvas(){
-      randomScatterValues()
-      console.log("UPDATING")
+
+    draw_update(){
+      obj.update()
+      obj.draw()
+    }
+
+    updateCanvas(data){
+      //randomScatterValues()
+      /*
       var context = this.context
       var dataContainer = this.dataContainer
       var chart = this
 
       var dataBinding = dataContainer.selectAll('custom.arc')
-            .data(scatterArr, function(d){ return d; })
-
+            .data(data, function(d){ return d; })
+// update existing element
       dataBinding.attr('size', 8)
-    //            .transition()
-    //            .duration(1000)
+                .transition()
+                .duration(1000)
                 .attr('size',15)
                 .attr('fillStyle', 'green')
 
+ // for new elements, create a 'custom' dom node,
       dataBinding.enter()
             .append('custom')
             .classed('arc',true)
             .attr('x',function(d){ return chart.x(d[0])})
             .attr('y',function(d){ return chart.y(d[1])})
-            .attr('radius',8)
+            .attr('size',8)
             .attr('fillStyle', 'red')
+
+   // for exiting elements,
       dataBinding.exit()
             .attr('size',8)
-    //        .transition()
-    //        .duration(1000)
+            .transition()
+            .duration(1000)
             .attr('size',5)
             .attr('fillStyle','lightgrey')
-
-      this.drawCanvas()
+            */
     }
 
-    drawCanvas(){
-      console.log("rendering")
-      var context = this.context
-      var dataContainer = this.dataContainer
-
-      context.fillStyle = "#fff";
-      context.rect(0,0,1160,440);
-      context.fill();
-
-      var elements = dataContainer.selectAll("custom.arc");
-      elements.each(function(d) {
-        var node = d3.select(this);
-
-        context.beginPath();
-        context.fillStyle = node.attr("fillStyle");
-        context.arc(node.attr("x"), node.attr("y"), node.attr("radius"), 0 , 2*Math.PI , true);
-        context.fill();
-        context.closePath();
-
-      });
-      console.log("finish rendering")
-
-    }
 
     addModule(type){
       try{
@@ -105,17 +86,34 @@ class Chart{
       }
 
     }
-
     draw(){
+      /*this.modules.forEach(function(el){
+        el.draw()
+      })*/
+
+      var context = obj.context
+      var dataContainer = obj.dataContainer
+
+      context.fillStyle = "#fff";
+      context.rect(0,0,this.width,this.height);
+      context.fill();
+
       this.modules.forEach(function(el){
         el.draw()
       })
-      /*  this.svg.append("g")
-            .attr("transform", "translate(0," + this.height + ")")
-            .call(d3.axisBottom(this.x))
+/*
+      //EACH ELEMENT MUST HAVE AN TYPE  THIS IS ARC FOR SCATTER
+      var elements = dataContainer.selectAll("custom.arc");
+      elements.each(function(d) {
+        var node = d3.select(this);
 
-        this.svg.append("g")
-            .call(d3.axisLeft(this.y))*/
+        context.beginPath();
+        context.fillStyle = node.attr("fillStyle");
+        context.arc(node.attr("x"), node.attr("y"), node.attr("size"), 0 , 2*Math.PI , true);
+        context.fill();
+        context.closePath();
+
+      });*/
     }
 
     update(){
@@ -185,14 +183,6 @@ class Module{
   }
 
   draw(){
-    var svg = this.chart.svg
-    var own_width = this.chart.width / this.chart.modules.length
-    this.x = d3.scaleLinear().range([0, own_width])
-    this.x1 =  own_width * this.index
-
-
-
-
     if(this.type=="linechart")
       this.drawlinechart()
     else if(this.type=="barchart")
@@ -206,246 +196,102 @@ class Module{
       this.updatelinechart()
     else if(this.type=="barchart")
       this.updatebarchart()
-    else if(this.type=="scatterChart")
+    else if(this.type=="scatterchart")
       this.updatescatterchart()
   }
 
   drawlinechart(){
-    // TODO: SEE thIS TUTORIAL https://bost.ocks.org/mike/path/
-    var svg = this.chart.svg
+    //TODO
+  }
 
-    var n = 40,
-      random = d3.randomNormal(0, .2),
-      data = d3.range(n).map(random)
-
-    this.x = d3.scaleLinear()
-      .domain([0, n - 1])
-      .range([0, this.chart.width / this.chart.modules.length])
-
-    this.y = d3.scaleLinear()
-      .domain([-1, 1])
-      .range([this.chart.height, 0])
-
-    var parent = this
-
-    var line = d3.line()
-        .x(function(d, i) { return parent.x(i); })
-        .y(function(d, i) { return parent.y(d); })
-
-
-    var linechart = svg.append("g").attr('id','linechart')
-                          .attr("transform", "translate("+this.x1+",0)")
-
-    this.elements["linechart"] = linechart
-
-    this.axisBottom = svg.append("g")
-    .attr("class", "axis axis--x")
-    .attr("transform", "translate("+this.x1+"," + this.chart.height + ")")
-    .call(d3.axisBottom(parent.x))
-
-    this.axisLeft = svg.append("g")
-    .attr("class", "axis axis--y")
-    .attr("transform", "translate("+this.x1+",0)")
-    .call(d3.axisLeft(parent.y));
-
-    linechart.append("defs").append("clipPath")
-        .attr("id", "clip")
-      .append("rect")
-        .attr("width", (this.chart.width / this.chart.modules.length))
-        .attr("height", this.chart.height)
-
-    linechart.append("g")
-        .attr("clip-path", "url(#clip)")
-      .append("path")
-        .datum(data)
-        .attr("class", "line")
-      .transition()
-        .duration(500)
-        .ease(d3.easeLinear)
-        .on("start", tick);
-
-    function tick() {
-      // Push a new data point onto the back.
-      data.push(random());
-      // Redraw the line.
-      d3.select(this)
-          .attr("d", line)
-          .attr("transform", null);
-      // Slide it to the left.
-      d3.active(this)
-          .attr("transform", "translate(" + parent.x(-1) + ",0)")
-        .transition()
-          .on("start", tick);
-      // Pop the old data point off the front.
-      data.shift();
-    }
+  updatelinechart(){
+    //TODO
   }
 
   drawbarchart(){
-    var svg = this.chart.svg
+    var context = this.chart.context
+    var elements = this.chart.dataContainer.selectAll('custom.bars')
+    elements.each(function(d){
+      var node = d3.select(this)
+
+      context.beginPath()
+      context.fillStyle = node.attr('fill')
+      context.rect(node.attr('x'), node.attr('y'), node.attr('width'), node.attr('height'))
+      context.fill()
+      context.closePath()
+
+    })
+  }
+
+  updatebarchart(){
+    var dataContainer = this.chart.dataContainer
+
     var own_width = this.chart.width / this.chart.modules.length
     var xscale = d3.scaleLinear().domain([0,220] /* TODO: scales */ ).range([0, this.chart.width / this.chart.modules.length])
 
     /* EACH IDIOM HAS ITS OWN AXIS SCALE */
     this.y = d3.scaleLinear().domain([0,100] /* TODO: scales */ ).range([this.chart.height, 0])
-    //console.log("BANDWIDTH: "+this.y.bandwidth())
-
     this.x = d3.scaleLinear().domain([0,220]).range([0, own_width])
 
-    this.axisBottom = svg.append("g")
-          .attr("transform", "translate("+ this.x1 +"," + this.chart.height + ")")
-          .call(d3.axisBottom(this.x)/*.ticks(0)*/)
-
-
-    this.axisLeft = svg.append("g")
-          .attr("transform", "translate("+ this.x1 +",0)")
-          .call(d3.axisLeft(this.y)/*.ticks(0)*/)
-          .selectAll('.tick text')
-          .attr('transform', 'translate(30,0)')
-
-    this.axisLeft.selectAll('.tick line')
-          .attr('transform', 'translate(35,0)')
-
-
     var values = groupBarChart()
-
-    var bars = svg.append("g").attr('id','bars')
-                  .attr("transform", "translate("+this.x1+",0)")
-    this.elements["bars"] = bars
+    var dataBinding = dataContainer.selectAll('custom.bars')
+          .data(values, function(d){ return d; })
 
     var bandwidth = this.chart.height / values.length ;
-    var height =  this.chart.height ;
     var color = d3.scaleOrdinal(d3.schemeCategory10);
-    bars.selectAll('.bar')
-          .data(values)
-        .enter().append('rect')
-          .attr('class','bar')
-          .attr('x',function(d){ return own_width - xscale(d)})
-          .attr('height', bandwidth )
-          .attr('y', function(d,p){ return (height - bandwidth) - (p*bandwidth);})
-          .transition()
-          .duration(300)
-          .attr('width', function(d){return xscale(d)})
-          .attr('fill', function(d,p) { return color(p)})
-        .transition()
-          .duration(500)
-          .ease(d3.easeLinear)
-          .on("start",tick)
 
-
-      function tick(){
-        /*d3.select(this)
-        .transition()
-        .duration(500)
-          .attr('x', function(d){ d+=randomNumberBounds(-10,10); return own_width - xscale(d)})
-          .attr('width', function(d){ return xscale(d)})
-        .on("end", tick)*/
-        //console.log(d3.select(this).data())
-        var element = d3.select(this).data()[0]
-        element += randomNumberBounds(-5,5)
-        element < 0 ? element = 0 : element
-        d3.select(this)
-          .transition()
-          .duration(500)
-          .attr('x', function(d){ d=element; return own_width - xscale(d)})
-          .attr('width', function(d){ d=element; return xscale(d)})
-          .on("end",tick)
-      }
+    dataBinding.enter()
+            .append('custom')
+            .classed('bars', true)
+            .attr('x', function(d){ return own_width - xscale(d)})
+            .attr('height', bandwidth)
+            .attr('y', function(d,p){ return (height - bandwidth) - (p * bandwidth); })
+            //.transition()
+            .attr('width', function(d){ return xscale(d)})
+            .attr('fill', function(d,p){ return color(p)})
 
   }
+
   drawscatterchart(){
-    var svg = this.chart.svg
+    var context = this.chart.context
+    var elements = this.chart.dataContainer.selectAll('custom.scatterVals')
+    elements.each(function(d){
+      var node = d3.select(this)
+
+      context.beginPath()
+      context.fillStyle = node.attr('fill')
+      context.rect(node.attr('cx'), node.attr('cy'), node.attr('r'), 0, 2 * Math.PI, false)
+      context.fill()
+      context.closePath()
+
+    })
+  }
+
+  updatescatterchart(){
+    var dataContainer = this.chart.dataContainer
+
     var own_width = this.chart.width / this.chart.modules.length
     var parent = this
 
     /* EACH IDIOM HAS ITS OWN AXIS SCALE */
     this.y = d3.scaleLinear().domain([0,100] /* TODO: scales */ ).range([this.chart.height, 0])
-    //console.log("BANDWIDTH: "+this.y.bandwidth())
-
     this.x = d3.scaleLinear().domain([0,100]).range([0, own_width])
 
-
     randomScatterValues()
-    var scatterVals = svg.append("g").attr('id','scatter-values')
-                    .attr('transform','translate('+this.x1+',0)')
+    var dataBinding = dataContainer.selectAll('custom.bars')
+          .data(scatterArr, function(d){ return d; })
 
-    this.axisBottom = svg.append("g")
-          .attr("transform", "translate("+ this.x1 +"," + this.chart.height + ")")
-          .call(d3.axisBottom(this.x)/*.ticks(0)*/)
-
-    this.axisLeft = svg.append("g")
-          .attr("transform", "translate("+ this.x1 +",0)")
-          .call(d3.axisLeft(this.y)/*.ticks(0)*/)
-          .selectAll('.tick text')
-          .attr('transform', 'translate(30,0)')
-
-    scatterVals.append("defs").append("clipPath")
-        .attr("id", "clip")
-      .append("rect")
-        .attr("width", (this.chart.width / this.chart.modules.length))
-        .attr("height", this.chart.height)
-
-    this.elements["values"] = scatterVals
     var color = d3.scaleOrdinal(d3.schemeCategory10);
-    scatterVals.append('g')
-        .attr('clip-path', 'url(#clip)')
-        .selectAll('.circles')
-          .data(scatterArr)
-        .enter().append('circle')
-          .attr('class','circles')
-          .attr('r',function(d){ return d[2] })
-          .attr("cx", function(d) {  return parent.x(d[0]) })
-          .attr("cy", function(d) {  return parent.y(d[1]) })
-          .attr('fill', function(d,p) { return color(p)} )
-        .transition()
-          .duration(500)
-          .ease(d3.easeLinear)
-          .on("start",tick)
-
-    function tick(){
-      //scatterArr.push([randomNumberBounds(0,100),randomNumberBounds(10,90),randomNumberBounds(0,10)])
-      var element = d3.select(this).data()[0]
-      var color = d3.scaleOrdinal(d3.schemeCategory10);
-
-      if(element[0]<0){
-        d3.select(this)
-        .attr("cy", function(d) {d[1]=randomNumberBounds(10,90);  return parent.y(d[1]) })
-          .transition()
-        .duration(0)
-        .attr('cx', function(d){d[0]=randomNumberBounds(105,120); return parent.x(d[0]) })
-        .on("end",tick)
-      }else{
-      d3.select(this)
-        .transition()
-          .duration(500)
-          .ease(d3.easeLinear)
-          .attr('cx', function(d){ d[0]-=2.5; return parent.x(d[0]) })
-          .on("end", tick)
-      }
-    }
-
-    function verifyScatterArr(){
-
-    }
 
 
+    dataBinding.enter()
+            .append('custom')
+            .classed('scatterVals', true)
+            .attr('r', function(d) { return d[2]})
+            .attr('cx', function(d) { return parent.x(d[0])})
+            .attr('cy', function(d) { return parent.y(d[1])})
+            .attr('fill', function(d,p) { return color(p)})
 
   }
 
-  updatebarchart(){
-    var values = groupBarChart()
-    var own_width = this.chart.width / this.chart.modules.length
-    var xscale = d3.scaleLinear().domain([0,220] /* TODO: scales */ ).range([0, this.chart.width / this.chart.modules.length])
-    var bandwidth = this.chart.height / values.length ;
-    var height =  this.chart.height ;
-    var color = d3.scaleOrdinal(d3.schemeCategory10);
-    var bars = this.elements["bars"]
-
-    bars.data( values)
-      .selectAll('.bar')
-          .transition()
-          .duration(100)
-          .attr('x',function(d,p){return own_width - xscale(values[p])})
-          .attr('width',function(d,p){return xscale(values[p])})
-  }
 }

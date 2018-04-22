@@ -25,7 +25,6 @@ $(document).ready(function(){
         obj.addModule("linechart")
         obj.addModule("scatterchart")*/
 
-      obj.draw()
       $("#init_button").attr('disabled', true)
       $('.graph_init input').attr('disabled', true)
       $('select').attr('disabled',true)
@@ -33,25 +32,27 @@ $(document).ready(function(){
     })
 
 
+    //obj.draw()
+    //randomScatterValues()
+    //d3.timer(obj.draw_update)
+
 
 });
 
 function randomScatterValues(){
   var MAX_LENGTH = 50;
-  console.log("start random")
   if (scatterArr.length == 0){
     for(var i=0; i < MAX_LENGTH; i++){
       scatterArr.push([randomNumberBounds(0,100),randomNumberBounds(0,100),randomNumberBounds(0,10)])
     }
-  }else{
+  }else{/*
     for(var i=0; i < scatterArr.length ; i++){
       scatterArr[i] = [randomNumberBounds(0,100),randomNumberBounds(0,100),randomNumberBounds(0,10)]
-    }
+    }*/
     for(var i=0; i < MAX_LENGTH; i++){
       scatterArr.push([randomNumberBounds(0,100),randomNumberBounds(0,100),randomNumberBounds(0,10)])
     }
   }
-  console.log("finish random")
 }
 
 function randomNumberBounds(min, max) {
