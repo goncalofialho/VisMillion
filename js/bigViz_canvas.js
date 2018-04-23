@@ -14,8 +14,8 @@ class Chart{
         this.transitions = 600
         this.canvas = d3.select(".bigvis").append("canvas")
                 .attr('id','canvas')
-                .attr("width", this.width + this.margin.left + this.margin.right)
-                .attr("height", this.height + this.margin.top + this.margin.bottom)
+                .attr("width", this.width /*+ this.margin.left + this.margin.right*/)
+                .attr("height", this.height /*+ this.margin.top + this.margin.bottom*/)
             //.append("g")
             //    .attr("transform", "translate(" + this.margin.left + "," + this.margin.top + ")")
         this.x = d3.scaleLinear().range([0, width])
@@ -38,40 +38,6 @@ class Chart{
       obj.draw()
     }
 
-    updateCanvas(data){
-      //randomScatterValues()
-      /*
-      var context = this.context
-      var dataContainer = this.dataContainer
-      var chart = this
-
-      var dataBinding = dataContainer.selectAll('custom.arc')
-            .data(data, function(d){ return d; })
-// update existing element
-      dataBinding.attr('size', 8)
-                .transition()
-                .duration(1000)
-                .attr('size',15)
-                .attr('fillStyle', 'green')
-
- // for new elements, create a 'custom' dom node,
-      dataBinding.enter()
-            .append('custom')
-            .classed('arc',true)
-            .attr('x',function(d){ return chart.x(d[0])})
-            .attr('y',function(d){ return chart.y(d[1])})
-            .attr('size',8)
-            .attr('fillStyle', 'red')
-
-   // for exiting elements,
-      dataBinding.exit()
-            .attr('size',8)
-            .transition()
-            .duration(1000)
-            .attr('size',5)
-            .attr('fillStyle','lightgrey')
-            */
-    }
 
 
     addModule(type){
@@ -86,34 +52,22 @@ class Chart{
       }
 
     }
-    draw(){
-      /*this.modules.forEach(function(el){
-        el.draw()
-      })*/
 
+    draw(){
+      this.clean_board()
+
+      this.modules.forEach(function(el){
+        el.draw()
+      })
+    }
+
+    clean_board(){
       var context = obj.context
       var dataContainer = obj.dataContainer
 
       context.fillStyle = "#fff";
       context.rect(0,0,this.width,this.height);
       context.fill();
-
-      this.modules.forEach(function(el){
-        el.draw()
-      })
-/*
-      //EACH ELEMENT MUST HAVE AN TYPE  THIS IS ARC FOR SCATTER
-      var elements = dataContainer.selectAll("custom.arc");
-      elements.each(function(d) {
-        var node = d3.select(this);
-
-        context.beginPath();
-        context.fillStyle = node.attr("fillStyle");
-        context.arc(node.attr("x"), node.attr("y"), node.attr("size"), 0 , 2*Math.PI , true);
-        context.fill();
-        context.closePath();
-
-      });*/
     }
 
     update(){
@@ -121,6 +75,7 @@ class Chart{
         el.update()
       })
     }
+
     findModule(index){
       return this.modules.find(function(el){
         if(el.index == index)
@@ -128,42 +83,6 @@ class Chart{
       })
     }
     changeModules(module1, module2){
-      var mod1 = this.findModule(module1)
-      var mod2 = this.findModule(module2)
-      var transitions = this.transitions
-
-      var elements1 = [], elements2 = []
-      elements1 = Object.keys(mod1.elements).map(function(key){
-         return mod1.elements[key];
-      });
-      elements2 = Object.keys(mod2.elements).map(function(key){
-         return mod2.elements[key];
-      });
-      console.log(elements1)
-      console.log(elements2)
-
-
-
-
-      elements1.forEach(function(el){
-        el.transition().duration(transitions).attr("transform","translate("+mod2.x1+",0)")
-      })
-      mod1.axisBottom.transition().duration(this.transitions).attr("transform", "translate("+ mod2.x1 +"," + this.height + ")")
-      mod1.axisLeft.transition().duration(this.transitions).attr("transform", "translate("+ mod2.x1 +",0)")
-
-      elements2.forEach(function(el){
-        el.transition().duration(transitions).attr("transform","translate("+mod1.x1+",0)")
-      })
-      mod2.axisBottom.transition().duration(this.transitions).attr("transform", "translate("+ mod1.x1 +"," + this.height + ")")
-      mod2.axisLeft.transition().duration(this.transitions).attr("transform", "translate("+ mod1.x1 +",0)")
-
-      var i = mod1.index
-      mod1.index = mod2.index
-      mod2.index = i
-
-      i = mod1.x1
-      mod1.x1 = mod2.x1
-      mod2.x1 = i
 
 
     }
@@ -192,6 +111,10 @@ class Module{
   }
 
   update(){
+    var own_width = this.chart.width / this.chart.modules.length
+    this.x = d3.scaleLinear().range([0, own_width])
+    this.x1 =  own_width * this.index
+
     if(this.type=="linechart")
       this.updatelinechart()
     else if(this.type=="barchart")
@@ -202,18 +125,57 @@ class Module{
 
   drawlinechart(){
     //TODO
+    var context = this.chart.context
+    var elements = this.chart.dataContainer.selectAll('custom.linechart.module'+this.index)
+    var parent = this
+
+    var lineGenerator = d3.line()
+      //          .x(function(d, i){ return parent.x(i); })
+      //          .y(function(d, i){ return parent.y(d); })
+      //          .curve(d3.curveCardinal)
+                  .context(context)
+
+    elements.each(function(d){
+      var node = d3.select(this)
+
+      context.translate(node.attr('x'),0)
+      context.fillStyle = node.attr('fill')
+      context.beginPath()
+      lineGenerator(parent.data[0])
+      context.stroke()
+      context.closePath()
+      context.translate(0,0)
+    })
   }
 
   updatelinechart(){
-    //TODO
+    var dataContainer = this.chart.dataContainer
+
+    var own_width = this.chart.width / this.chart.modules.length
+    var n = 40
+
+    this.y = d3.scaleLinear().domain([0,10] /* TODO: scales */).range([this.chart.height - 10 , 0])
+    this.x = d3.scaleLinear().domain([0, n-1] /* TODO: scales */).range([0, own_width])
+
+    this.data = [Array.from({length: n}, (v, i) => [this.x(i), this.y(randomNumberBounds(0,10))])];
+    var dataBinding = dataContainer.selectAll('custom.linechart.module'+this.index)
+          .data(this.data, function(d) {return d; })
+    var parent = this
+
+    dataBinding.enter()
+          .append('custom')
+          .classed('linechart', true)
+          .classed('module'+this.index, true)
+          .attr('x', function(d){ return parent.x1})
+          .attr('fill', 'orange')
+
   }
 
   drawbarchart(){
     var context = this.chart.context
-    var elements = this.chart.dataContainer.selectAll('custom.bars')
+    var elements = this.chart.dataContainer.selectAll('custom.bars.module'+this.index)
     elements.each(function(d){
       var node = d3.select(this)
-
       context.beginPath()
       context.fillStyle = node.attr('fill')
       context.rect(node.attr('x'), node.attr('y'), node.attr('width'), node.attr('height'))
@@ -228,13 +190,14 @@ class Module{
 
     var own_width = this.chart.width / this.chart.modules.length
     var xscale = d3.scaleLinear().domain([0,220] /* TODO: scales */ ).range([0, this.chart.width / this.chart.modules.length])
+    var parent = this
 
     /* EACH IDIOM HAS ITS OWN AXIS SCALE */
     this.y = d3.scaleLinear().domain([0,100] /* TODO: scales */ ).range([this.chart.height, 0])
     this.x = d3.scaleLinear().domain([0,220]).range([0, own_width])
 
     var values = groupBarChart()
-    var dataBinding = dataContainer.selectAll('custom.bars')
+    var dataBinding = dataContainer.selectAll('custom.bars.module'+this.index)
           .data(values, function(d){ return d; })
 
     var bandwidth = this.chart.height / values.length ;
@@ -243,7 +206,8 @@ class Module{
     dataBinding.enter()
             .append('custom')
             .classed('bars', true)
-            .attr('x', function(d){ return own_width - xscale(d)})
+            .classed('module'+this.index, true)
+            .attr('x', function(d){console.log(parent.x1); return parent.x1 + (own_width - xscale(d))})
             .attr('height', bandwidth)
             .attr('y', function(d,p){ return (height - bandwidth) - (p * bandwidth); })
             //.transition()
@@ -254,13 +218,12 @@ class Module{
 
   drawscatterchart(){
     var context = this.chart.context
-    var elements = this.chart.dataContainer.selectAll('custom.scatterVals')
+    var elements = this.chart.dataContainer.selectAll('custom.scatterVals.module'+this.index)
     elements.each(function(d){
       var node = d3.select(this)
-
       context.beginPath()
       context.fillStyle = node.attr('fill')
-      context.rect(node.attr('cx'), node.attr('cy'), node.attr('r'), 0, 2 * Math.PI, false)
+      context.arc(node.attr('cx'), node.attr('cy'), node.attr('r'), 0, 2 * Math.PI, false)
       context.fill()
       context.closePath()
 
@@ -278,7 +241,7 @@ class Module{
     this.x = d3.scaleLinear().domain([0,100]).range([0, own_width])
 
     randomScatterValues()
-    var dataBinding = dataContainer.selectAll('custom.bars')
+    var dataBinding = dataContainer.selectAll('custom.scatterVals.module'+this.index)
           .data(scatterArr, function(d){ return d; })
 
     var color = d3.scaleOrdinal(d3.schemeCategory10);
@@ -287,8 +250,9 @@ class Module{
     dataBinding.enter()
             .append('custom')
             .classed('scatterVals', true)
+            .classed('module'+this.index, true)
             .attr('r', function(d) { return d[2]})
-            .attr('cx', function(d) { return parent.x(d[0])})
+            .attr('cx', function(d) { return parent.x1 + parent.x(d[0])})
             .attr('cy', function(d) { return parent.y(d[1])})
             .attr('fill', function(d,p) { return color(p)})
 
