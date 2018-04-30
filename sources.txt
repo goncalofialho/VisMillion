@@ -13,3 +13,6 @@ https://github.com/davidjamesmoss/django-csv-stream
 http://pythondata.com/working-large-csv-files-python/
 
 CSV BID - https://www.kaggle.com/datasets?sortBy=hottest&group=public&page=1&pageSize=20&size=large&filetype=all&license=all
+
+
+REALLY IMPORTANT D3 STREAMING - https://www.youtube.com/watch?v=Lc2TA0-gZqg

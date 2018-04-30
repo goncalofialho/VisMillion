@@ -1,2 +1,0 @@
-import bq_helper
-

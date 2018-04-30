@@ -1,10 +1,14 @@
-var lineArr = [], barArr = [], scatterArr = [] ;
+var lineArr = [], barArr = [], scatterArr = [], bufferData = [] ;
 seedBarChart()
+var fps, time0, time1;
 var domain = [0,100]
+var arr;
 $(document).ready(function(){
 
     width = $('.container').width()
     obj = new Chart(width, height, margin)
+    time0 = Date.now()
+    fps = d3.select('#fps span')
 
     $("input").bind('keyup mouseup', function () {
       var n_selects = parseInt($(this).val())
@@ -30,14 +34,32 @@ $(document).ready(function(){
       $('select').attr('disabled',true)
 
     })
+    /*
+    arr = []
+	var ts = new Date().getTime()
+	for(let i = 0; i<50 ; i++){
+		var newts = ts - (i * randomNumberBounds(100,300))
+		arr.push({ts: newts,
+				data: randomNumberBounds(20,80)})
+		ts = newts
+    }
+    bufferData = arr*/
 
+    obj.addModule('scatterchart')
+    obj.addModule('scatterchart')
 
     //obj.draw()
     //randomScatterValues()
-    //d3.timer(obj.draw_update)
 
+
+
+    /* CONNECT WEBSOCKET */
+    connect()
+    d3.timer(obj.draw_update)
+    //obj.draw_update()
 
 });
+
 
 function randomScatterValues(){
   var MAX_LENGTH = 50;

@@ -17,7 +17,7 @@ class CountThread(Thread):
 
     def __init(self):
         super(CountThread, self).__init__()
-        self.delay = 0.2
+        self.delay = 0.1
 
     def get_data(self):
         """ GET DATA AND EMIT TO SOCKET """
@@ -27,7 +27,7 @@ class CountThread(Thread):
             for i in range(10):
                 name += (fake.name() + " , ")
             data = dict(names=name[:-3])
-            socketio.send(data)
+            socketio.send(randint(5,100))
             count += 1
             sleep(self.getDelay())
 
@@ -90,6 +90,3 @@ def connect_socket():
 
 if __name__ == '__main__':
     socketio.run(app, port=8002)
-
-
-

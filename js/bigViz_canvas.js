@@ -3,7 +3,9 @@ var width = 800
 var height = 400
 var obj;
 
-
+function smoothVal(value, target){
+    window[value] = target
+}
 class Chart{
     constructor(width, height, margin){
         this.availableIdioms = ["linechart", "barchart", "scatterchart"]
@@ -11,7 +13,8 @@ class Chart{
         this.height = height
         this.margin = margin
         this.modules = []
-        this.transitions = 600
+        this.transitions = 100
+        this.pixelsPerSecond = 10
         this.canvas = d3.select(".bigvis").append("canvas")
                 .attr('id','canvas')
                 .attr("width", this.width /*+ this.margin.left + this.margin.right*/)
@@ -36,9 +39,38 @@ class Chart{
     draw_update(){
       obj.update()
       obj.draw()
+
+      // COMPUTE FPS
+      time1 = Date.now()
+      fps.text(Math.round(1000/ (time1 - time0)))
+      time0 = time1
     }
 
+    smoothPixelsPerSecond(target){
+        var incs = Math.abs(this.pixelsPerSecond - target)
+        var interval = this.transitions / incs
+        var parent = this
+        var incrementer = setInterval(calculate, interval, target, parent)
 
+        /* SOME MAGIC ON THIS TIMER SINCE JAVASCRIPT IS CCRRAAAZYYYY */
+        // FIX WITH WEBWORKERS MAYBE
+        setTimeout( clearIncrementer, incs * 5 , target)
+
+        function calculate(target, parent){
+            console.log("incrementing to "+ target)
+            if(parent.pixelsPerSecond > target){
+                parent.pixelsPerSecond-=1
+            }else if(parent.pixelsPerSecond < target){
+                parent.pixelsPerSecond+=1
+            }
+            console.log(parent.pixelsPerSecond)
+        }
+
+        function clearIncrementer(){
+            console.log("Clearing incrementer")
+            clearInterval(incrementer)
+        }
+    }
 
     addModule(type){
       try{
@@ -86,6 +118,21 @@ class Chart{
 
 
     }
+    /* TRANSFERIR DATA DE UM BUFFER PARA OUTRO */
+    transferData(from, data, chart){
+        if(data.length == 0 || from <= 0)
+            return
+
+        if(chart.modules[from-1] == undefined){
+            //Transfer Data
+            //console.log("Cannot trasnfer data to nothing")
+            return
+        }else{
+            for (let i = 0; i < data.length; i++){
+                chart.modules[from-1].data.push(data[i])
+            }
+        }
+    }
 }
 
 class Module{
@@ -98,8 +145,29 @@ class Module{
     this.axisBottom
     this.axisLeft
     this.x1
-    this.elements = {}
-  }
+    this.data = []
+
+    /* EACH IDIOM HAS ITS OWN AXIS SCALE */
+
+    if(this.type=="linechart"){
+
+    }else if(this.type=="barchart"){
+
+    }else if(this.type=="scatterchart"){
+        var own_width = this.chart.width / (this.chart.modules.length + 1)
+
+        this.x1 = own_width * (this.chart.modules.length + 1)
+        this.y = d3.scaleLinear().domain([0,100] /* TODO: scales */ ).range([this.chart.height, 0])
+        this.x = d3.scaleTime().range([0, own_width])
+
+        var endTime = new Date()
+        var startTime = new Date(endTime.getTime() - own_width / this.chart.pixelsPerSecond * 1000)
+
+        this.x.domain([startTime, endTime])
+
+
+    }
+}
 
   draw(){
     if(this.type=="linechart")
@@ -112,15 +180,14 @@ class Module{
 
   update(){
     var own_width = this.chart.width / this.chart.modules.length
-    this.x = d3.scaleLinear().range([0, own_width])
     this.x1 =  own_width * this.index
-
-    if(this.type=="linechart")
+    if(this.type=="linechart"){
       this.updatelinechart()
-    else if(this.type=="barchart")
+    }else if(this.type=="barchart"){
       this.updatebarchart()
-    else if(this.type=="scatterchart")
+    }else if(this.type=="scatterchart"){
       this.updatescatterchart()
+    }
   }
 
   drawlinechart(){
@@ -194,7 +261,9 @@ class Module{
 
     /* EACH IDIOM HAS ITS OWN AXIS SCALE */
     this.y = d3.scaleLinear().domain([0,100] /* TODO: scales */ ).range([this.chart.height, 0])
-    this.x = d3.scaleLinear().domain([0,220]).range([0, own_width])
+    //this.x = d3.scaleLinear().domain([0,220]).range([0, own_width])
+    this.x = d3.scaleTime().range([0, own_width])
+
 
     var values = groupBarChart()
     var dataBinding = dataContainer.selectAll('custom.bars.module'+this.index)
@@ -218,17 +287,90 @@ class Module{
 
   drawscatterchart(){
     var context = this.chart.context
+    var parent = this
+
+    this.data.forEach(function(el){
+        let cx = parent.x1 + parent.x(el.ts)
+        let cy = parent.y(el.data)
+        let r = 5
+        let color = (parent.index == 0) ? 'blue' : 'orange'
+        //let color = 'orange'
+        context.beginPath()
+      context.fillStyle = color
+      context.arc(cx, cy, r, 0, 2 * Math.PI, false)
+      context.fill()
+      context.closePath()
+
+    })
+/*
+
     var elements = this.chart.dataContainer.selectAll('custom.scatterVals.module'+this.index)
+
+
     elements.each(function(d){
       var node = d3.select(this)
+
       context.beginPath()
       context.fillStyle = node.attr('fill')
       context.arc(node.attr('cx'), node.attr('cy'), node.attr('r'), 0, 2 * Math.PI, false)
       context.fill()
       context.closePath()
 
-    })
+    })*/
   }
+
+  updatescatterchart(){
+    var dataContainer = this.chart.dataContainer
+    var parent = this
+    var own_width = this.chart.width / this.chart.modules.length
+    this.x1 = own_width * this.index
+
+    var ts = new Date()
+    var endTime = new Date(ts - ((own_width / parent.chart.pixelsPerSecond * 1000) * ((this.chart.modules.length - 1) - this.index) ))
+    var startTime = new Date(endTime.getTime() - own_width / parent.chart.pixelsPerSecond * 1000)
+
+    /* REMOVING DATACONTAINER ELEMENTS THAT ARE NO LONGER NEEDED */
+    for(var i = 0; i < this.data.length; i++){
+        if(this.data[i].ts > startTime.getTime())
+            break
+    }
+    if(this.index != 0){
+        this.chart.transferData(this.index, this.data.splice(0,i),parent.chart)
+    }
+
+    /* UPDATE DOMAINS */
+    this.x = d3.scaleTime().range([0, own_width])
+    this.x.domain([startTime, endTime])
+
+    /*
+    var dataBinding = dataContainer.selectAll('custom.scatterVals.module'+this.index)
+        .data(bufferData, function(d){ return d; })
+
+    var dataBinding.data(bufferData).enter()
+        .append('custom')
+        .classed('scatterVals', true)
+        .classed('module'+this.index, true)
+        .attr('r', function(d) { return 5 /})
+        .attr('fill', function(d,p) { return 'orange'})
+        .attr('ts', function(d){ return d.ts})
+        .attr('cx', function(d) { return parent.x1 + parent.x(d.ts)})
+        .attr('cy', function(d) { return parent.y(d.data)})
+
+    dataBinding
+            .attr('cx', function(d) { return parent.x1 + parent.x(d.ts)})
+            .attr('cy', function(d) { return parent.y(d.data)})
+
+     dataBinding.exit()
+            .remove()
+    */
+  }
+
+
+}
+
+
+/*
+    d3 version allows transitions
 
   updatescatterchart(){
     var dataContainer = this.chart.dataContainer
@@ -237,25 +379,46 @@ class Module{
     var parent = this
 
     /* EACH IDIOM HAS ITS OWN AXIS SCALE */
-    this.y = d3.scaleLinear().domain([0,100] /* TODO: scales */ ).range([this.chart.height, 0])
-    this.x = d3.scaleLinear().domain([0,100]).range([0, own_width])
+    //this.y = d3.scaleLinear().domain([min,max] /* TODO: scales */ ).range([this.chart.height, 0])
+    //this.x = d3.scaleLinear().domain([0,100]).range([0, own_width])
 
-    randomScatterValues()
-    var dataBinding = dataContainer.selectAll('custom.scatterVals.module'+this.index)
-          .data(scatterArr, function(d){ return d; })
+   // var endTime = new Date()
+  //  var startTime = new Date(endTime.getTime() - own_width / 10 * 1000)
 
-    var color = d3.scaleOrdinal(d3.schemeCategory10);
+    /* REMOVING DATACONTAINER ELEMENTS THAT ARE NO LONGER NEEDED */
+  //  for(var i = 0; i < bufferData.length; i++){
+ //       if(bufferData[i].ts > startTime.getTime())
+  //          break
+    //}
+   // bufferData.splice(0,i)
 
 
-    dataBinding.enter()
+    //console.log("bufferData length: "  + bufferData.length)
+  //  var dataBinding = dataContainer.selectAll('custom.scatterVals.module'+this.index)
+  //        .data(bufferData, function(d){ return d; })
+
+  //  var color = d3.scaleOrdinal(d3.schemeCategory10);
+
+
+    /* UPDATE DOMAINS */
+//    this.x.domain([startTime, endTime])
+    //this.y.domain([minScatter, maxScatter])
+
+    /*var dataBinding.data(bufferData).enter()
             .append('custom')
             .classed('scatterVals', true)
             .classed('module'+this.index, true)
-            .attr('r', function(d) { return d[2]})
-            .attr('cx', function(d) { return parent.x1 + parent.x(d[0])})
-            .attr('cy', function(d) { return parent.y(d[1])})
-            .attr('fill', function(d,p) { return color(p)})
+            .attr('r', function(d) { return 5 /})
+            .attr('cx', function(d) { return parent.x1 + parent.x(d.ts)})
+            .attr('cy', function(d) { return parent.y(d.data)})
+            .attr('ts', function(d){ return d.ts})
+            .attr('fill', function(d,p) { return 'orange'})
 
-  }
+    dataBinding
+            .attr('cx', function(d) { return parent.x1 + parent.x(d.ts)})
+            .attr('cy', function(d) { return parent.y(d.data)})
 
-}
+     dataBinding.exit()
+            .remove()
+    */
+ // }
