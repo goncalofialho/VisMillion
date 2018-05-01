@@ -44,8 +44,9 @@ $(document).ready(function(){
 		ts = newts
     }
     bufferData = arr*/
-
-    obj.addModule('scatterchart')
+  //
+  obj.addModule('barchart')
+obj.addModule('linechart')
     obj.addModule('scatterchart')
 
     //obj.draw()

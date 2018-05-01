@@ -148,23 +148,35 @@ class Module{
     this.data = []
 
     /* EACH IDIOM HAS ITS OWN AXIS SCALE */
+    var own_width = this.chart.width / (this.chart.modules.length + 1)
+    this.x1 = own_width * (this.chart.modules.length + 1)
 
     if(this.type=="linechart"){
+        this.y = d3.scaleLinear().domain([0,100]).range([this.chart.height, 0])
+        this.x = d3.scaleTime().range([0, own_width])
+
+        var endTime = new Date()
+        var startTime = new Date(endTime.getTime() - own_width / this.chart.pixelsPerSecond * 1000)
+        this.x.domain([startTime, endTime])
 
     }else if(this.type=="barchart"){
+        this.domain = [0,100]
+        this.numBars = 10
+
+        this.y = d3.scaleLinear().domain(0,10).range([this.chart.height])
+        this.x = d3.scaleLinear().domain(domain).range([0, own_width])
+
+        this.barsData = new Array(this.numBars).fill(0)
+
+        this.bandwidth = this.chart.height / this.numBars
 
     }else if(this.type=="scatterchart"){
-        var own_width = this.chart.width / (this.chart.modules.length + 1)
-
-        this.x1 = own_width * (this.chart.modules.length + 1)
         this.y = d3.scaleLinear().domain([0,100] /* TODO: scales */ ).range([this.chart.height, 0])
         this.x = d3.scaleTime().range([0, own_width])
 
         var endTime = new Date()
         var startTime = new Date(endTime.getTime() - own_width / this.chart.pixelsPerSecond * 1000)
-
         this.x.domain([startTime, endTime])
-
 
     }
 }
@@ -191,38 +203,57 @@ class Module{
   }
 
   drawlinechart(){
-    //TODO
     var context = this.chart.context
-    var elements = this.chart.dataContainer.selectAll('custom.linechart.module'+this.index)
     var parent = this
 
     var lineGenerator = d3.line()
-      //          .x(function(d, i){ return parent.x(i); })
-      //          .y(function(d, i){ return parent.y(d); })
+                .x(function(d){ return parent.x1 + parent.x(d.ts); })
+                .y(function(d){ return parent.y(d.data); })
+                .curve(d3.curveCardinal)
       //          .curve(d3.curveCardinal)
                   .context(context)
 
-    elements.each(function(d){
-      var node = d3.select(this)
 
-      context.translate(node.attr('x'),0)
-      context.fillStyle = node.attr('fill')
+      context.fillStyle = (parent.index == 0) ? 'blue' : 'orange'
       context.beginPath()
-      lineGenerator(parent.data[0])
+      lineGenerator(this.data)
       context.stroke()
       context.closePath()
-      context.translate(0,0)
-    })
   }
 
   updatelinechart(){
+    var dataContainer = this.chart.dataContainer
+    var parent = this
+    var own_width = this.chart.width / this.chart.modules.length
+    this.x1 = own_width * this.index
+
+    var ts = new Date()
+    var endTime = new Date(ts - ((own_width / parent.chart.pixelsPerSecond * 1000) * ((this.chart.modules.length - 1) - this.index) ))
+    var startTime = new Date(endTime.getTime() - own_width / parent.chart.pixelsPerSecond * 1000)
+
+
+    /* REMOVING DATACONTAINER ELEMENTS THAT ARE NO LONGER NEEDED */
+    for(var i = 0; i < this.data.length; i++){
+        if(this.data[i].ts > startTime.getTime())
+            break
+    }
+    if(this.index != 0){
+        this.chart.transferData(this.index, this.data.splice(0,i),parent.chart)
+    }
+
+    /* UPDATE DOMAINS */
+    this.x = d3.scaleTime().range([0, own_width])
+    this.x.domain([startTime, endTime])
+
+
+  /*
     var dataContainer = this.chart.dataContainer
 
     var own_width = this.chart.width / this.chart.modules.length
     var n = 40
 
-    this.y = d3.scaleLinear().domain([0,10] /* TODO: scales */).range([this.chart.height - 10 , 0])
-    this.x = d3.scaleLinear().domain([0, n-1] /* TODO: scales */).range([0, own_width])
+    this.y = d3.scaleLinear().domain([0,10] ).range([this.chart.height - 10 , 0])
+    this.x = d3.scaleLinear().domain([0, n-1] ).range([0, own_width])
 
     this.data = [Array.from({length: n}, (v, i) => [this.x(i), this.y(randomNumberBounds(0,10))])];
     var dataBinding = dataContainer.selectAll('custom.linechart.module'+this.index)
@@ -235,33 +266,107 @@ class Module{
           .classed('module'+this.index, true)
           .attr('x', function(d){ return parent.x1})
           .attr('fill', 'orange')
+*/
+
+
 
   }
 
   drawbarchart(){
     var context = this.chart.context
+    var own_width = this.chart.width / this.chart.modules.length
+
+    for(var i=0; i < this.barsData.length; i++){
+        let x = this.x1 + (own_width - this.x(this.barsData[i]))
+        let y = (this.chart.height - this.bandwidth) - (i * this.bandwidth)
+        let width = this.x(this.barsData[i])
+        let height = this.bandwidth
+        let color = (parent.index == 0) ? 'blue' : 'orange'
+
+        context.beginPath()
+        context.fillStyle = color
+        context.rect(x,y,width,height)
+        context.fill()
+        context.closePath()
+    }
+
+
+/*
     var elements = this.chart.dataContainer.selectAll('custom.bars.module'+this.index)
     elements.each(function(d){
       var node = d3.select(this)
       context.beginPath()
-      context.fillStyle = node.attr('fill')
+      context.fillStyle = (parent.index == 0) ? 'blue' : 'orange'
       context.rect(node.attr('x'), node.attr('y'), node.attr('width'), node.attr('height'))
       context.fill()
       context.closePath()
 
-    })
+    })*/
   }
 
   updatebarchart(){
     var dataContainer = this.chart.dataContainer
-
+    var parent = this
     var own_width = this.chart.width / this.chart.modules.length
-    var xscale = d3.scaleLinear().domain([0,220] /* TODO: scales */ ).range([0, this.chart.width / this.chart.modules.length])
+    this.x1 = own_width * this.index
+
+    var ts = new Date()
+    var endTime = new Date(ts - ((own_width / parent.chart.pixelsPerSecond * 1000) * ((this.chart.modules.length - 1) - this.index) ))
+    var startTime = new Date(endTime.getTime() - own_width / parent.chart.pixelsPerSecond * 1000)
+
+
+    /* REMOVING DATACONTAINER ELEMENTS THAT ARE NO LONGER NEEDED */
+    for(var i = 0; i < this.data.length; i++){
+        if(this.data[i].ts > startTime.getTime())
+            break
+    }
+    if(this.index != 0){
+        this.chart.transferData(this.index, this.data.splice(0,i),parent.chart)
+    }
+
+
+    var max = Math.max.apply(Math, this.domain)
+    var slices = max/this.numBars
+
+    parent.barsData = new Array(this.numBars).fill(0)
+    this.data.forEach(function(el){
+    //console.log((Math.ceil(el.data/slices) - 1))
+
+      parent.barsData[(Math.ceil(el.data/slices) - 1)] += 1
+
+    })
+/*
+    TRY THIS FOR SMOOTH TRANSITIONS
+
+    var dataBinding = dataContainer.selectAll('custom.bars.module'+this.index)
+            .data(this.barsData, function(d){ return d; })
+
+    dataBinding.enter()
+            .append('custom')
+            .classed('bars', true)
+            .classed('module'+this.index, true)
+            .attr('height', this.bandwidth)
+            .attr('y', function(d,p){ return (parent.chart.height - parent.bandwidth) - (p * parent.bandwidth); })
+            .transition()
+            .duration(300)
+            .ease(d3.easeLinear)
+            .attr('width', function(d){ return parent.x(d)})
+            .attr('x', function(d){ return parent.x1 + (own_width - parent.x(d))})
+
+    dataBinding.transition()
+            .duration(300)
+            .ease(d3.easeLinear)
+            .attr('width', function(d){ return parent.x(d)})
+            .attr('x', function(d){ return parent.x1 + (own_width - parent.x(d))})
+
+    dataBinding.exit()
+            .remove()*/
+/*
+    var own_width = this.chart.width / this.chart.modules.length
+    var xscale = d3.scaleLinear().domain([0,220]).range([0, this.chart.width / this.chart.modules.length])
     var parent = this
 
-    /* EACH IDIOM HAS ITS OWN AXIS SCALE */
-    this.y = d3.scaleLinear().domain([0,100] /* TODO: scales */ ).range([this.chart.height, 0])
-    //this.x = d3.scaleLinear().domain([0,220]).range([0, own_width])
+    this.y = d3.scaleLinear().domain([0,100] ).range([this.chart.height, 0])
     this.x = d3.scaleTime().range([0, own_width])
 
 
@@ -270,8 +375,8 @@ class Module{
           .data(values, function(d){ return d; })
 
     var bandwidth = this.chart.height / values.length ;
-    var color = d3.scaleOrdinal(d3.schemeCategory10);
-
+    var color = d3.scaleOrdinal(d3.schemeCategory10);*/
+/*
     dataBinding.enter()
             .append('custom')
             .classed('bars', true)
@@ -281,7 +386,7 @@ class Module{
             .attr('y', function(d,p){ return (height - bandwidth) - (p * bandwidth); })
             //.transition()
             .attr('width', function(d){ return xscale(d)})
-            .attr('fill', function(d,p){ return color(p)})
+            .attr('fill', function(d,p){ return color(p)})*/
 
   }
 
