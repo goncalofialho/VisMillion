@@ -1,17 +1,17 @@
-var margin = {top: 20, right: 20, left: 30, bottom: 20}
+var margin = {top: 20, right: 20, left: 20, bottom: 20}
 var width = 800
 var height = 400
 var obj;
 
-function smoothVal(value, target){
-    window[value] = target
-}
+/* TODO: APPLY GETTERS AND SETTERS */
+
 class Chart{
     constructor(width, height, margin){
         this.availableIdioms = ["linechart", "barchart", "scatterchart"]
         this.width = width
         this.height = height
         this.margin = margin
+        /* TODO: APPLY MARGINS ON THIS */
         this.modules = []
         this.transitions = 100
         this.pixelsPerSecond = 10
@@ -34,6 +34,7 @@ class Chart{
         var scalex = this.x
         var scaley = this.y
 
+
     }
 
     draw_update(){
@@ -46,29 +47,13 @@ class Chart{
       time0 = time1
     }
 
-    smoothPixelsPerSecond(target){
-        var incs = Math.abs(this.pixelsPerSecond - target)
-        var interval = this.transitions / incs
-        var parent = this
-        var incrementer = setInterval(calculate, interval, target, parent)
 
-        /* SOME MAGIC ON THIS TIMER SINCE JAVASCRIPT IS CCRRAAAZYYYY */
-        // FIX WITH WEBWORKERS MAYBE
-        setTimeout( clearIncrementer, incs * 5 , target)
-
-        function calculate(target, parent){
-            console.log("incrementing to "+ target)
-            if(parent.pixelsPerSecond > target){
-                parent.pixelsPerSecond-=1
-            }else if(parent.pixelsPerSecond < target){
-                parent.pixelsPerSecond+=1
-            }
-            console.log(parent.pixelsPerSecond)
-        }
-
-        function clearIncrementer(){
-            console.log("Clearing incrementer")
-            clearInterval(incrementer)
+    animateFunc(elapsed, interpolator, timer){
+        const step = elapsed / this.transitions
+        if(step > 1){
+            timer.stop()
+            console.log(interpolator(1))
+            return
         }
     }
 
@@ -84,13 +69,75 @@ class Chart{
       }
 
     }
+    update(){
+
+    var ts = new Date()
+
+    /* AXIS */
+    var endTime = new Date(ts)
+    var startTime = new Date(endTime.getTime() - this.width / this.pixelsPerSecond * 1000)
+
+    this.x = d3.scaleTime().range([0, this.width]).domain([startTime, endTime])
+
+
+      this.modules.forEach(function(el){
+        el.update(ts)
+      })
+    }
+
 
     draw(){
       this.clean_board()
 
+    /* DRAW AXIS */
+    var tickCount = 10,
+        tickSize = 6,
+        ticks = this.x.ticks(tickCount),
+        ticksY = this.y.ticks(tickCount),
+        tickYFormat = this.y.tickFormat(),
+        tickFormat = this.x.tickFormat(),
+        context = this.context,
+        x = this.x,
+        y = this.y,
+        height = this.height - 30;
+/*
+    context.beginPath();
+    ticks.forEach(function(d){
+        context.moveTo(x(d), height)
+        context.lineTo(x(d), height + tickSize)
+    })
+    context.strokeStyle = "black"
+    context.stroke()
+*/
+
       this.modules.forEach(function(el){
         el.draw()
       })
+
+    context.beginPath()
+    ticksY.forEach(function(d){
+        context.moveTo(25, y(d))
+        context.lineTo(15 + tickSize, y(d))
+    })
+    context.strokeStyle = "black"
+    context.stroke()
+
+    context.fillStyle = "black"
+    context.textAlign = "right"
+    context.textBaseline = "middle"
+    ticksY.forEach(function(d){
+        context.fillText(tickYFormat(d), tickSize + 10 , y(d))
+    })
+
+
+
+    context.textAlign = "center"
+    context.Baseline = "top"
+    ticks.forEach(function(d){
+        context.fillText(tickFormat(d), x(d), (height + tickSize) + 10 )
+    })
+
+
     }
 
     clean_board(){
@@ -102,11 +149,6 @@ class Chart{
       context.fill();
     }
 
-    update(){
-      this.modules.forEach(function(el){
-        el.update()
-      })
-    }
 
     findModule(index){
       return this.modules.find(function(el){
@@ -171,7 +213,7 @@ class Module{
         this.bandwidth = this.chart.height / this.numBars
 
     }else if(this.type=="scatterchart"){
-        this.y = d3.scaleLinear().domain([0,100] /* TODO: scales */ ).range([this.chart.height, 0])
+        this.y = d3.scaleLinear().domain([0,100]).range([this.chart.height, 0])
         this.x = d3.scaleTime().range([0, own_width])
 
         var endTime = new Date()
@@ -190,15 +232,15 @@ class Module{
       this.drawscatterchart()
   }
 
-  update(){
+  update(ts){
     var own_width = this.chart.width / this.chart.modules.length
     this.x1 =  own_width * this.index
     if(this.type=="linechart"){
-      this.updatelinechart()
+      this.updatelinechart(ts)
     }else if(this.type=="barchart"){
-      this.updatebarchart()
+      this.updatebarchart(ts)
     }else if(this.type=="scatterchart"){
-      this.updatescatterchart()
+      this.updatescatterchart(ts)
     }
   }
 
@@ -221,13 +263,12 @@ class Module{
       context.closePath()
   }
 
-  updatelinechart(){
+  updatelinechart(ts){
     var dataContainer = this.chart.dataContainer
     var parent = this
     var own_width = this.chart.width / this.chart.modules.length
     this.x1 = own_width * this.index
 
-    var ts = new Date()
     var endTime = new Date(ts - ((own_width / parent.chart.pixelsPerSecond * 1000) * ((this.chart.modules.length - 1) - this.index) ))
     var startTime = new Date(endTime.getTime() - own_width / parent.chart.pixelsPerSecond * 1000)
 
@@ -304,13 +345,13 @@ class Module{
     })*/
   }
 
-  updatebarchart(){
+  updatebarchart(ts){
+  /* TODO: TRANSICOES */
     var dataContainer = this.chart.dataContainer
     var parent = this
     var own_width = this.chart.width / this.chart.modules.length
     this.x1 = own_width * this.index
 
-    var ts = new Date()
     var endTime = new Date(ts - ((own_width / parent.chart.pixelsPerSecond * 1000) * ((this.chart.modules.length - 1) - this.index) ))
     var startTime = new Date(endTime.getTime() - own_width / parent.chart.pixelsPerSecond * 1000)
 
@@ -424,13 +465,12 @@ class Module{
     })*/
   }
 
-  updatescatterchart(){
+  updatescatterchart(ts){
     var dataContainer = this.chart.dataContainer
     var parent = this
     var own_width = this.chart.width / this.chart.modules.length
     this.x1 = own_width * this.index
 
-    var ts = new Date()
     var endTime = new Date(ts - ((own_width / parent.chart.pixelsPerSecond * 1000) * ((this.chart.modules.length - 1) - this.index) ))
     var startTime = new Date(endTime.getTime() - own_width / parent.chart.pixelsPerSecond * 1000)
 
@@ -484,7 +524,7 @@ class Module{
     var parent = this
 
     /* EACH IDIOM HAS ITS OWN AXIS SCALE */
-    //this.y = d3.scaleLinear().domain([min,max] /* TODO: scales */ ).range([this.chart.height, 0])
+    //this.y = d3.scaleLinear().domain([min,max]).range([this.chart.height, 0])
     //this.x = d3.scaleLinear().domain([0,100]).range([0, own_width])
 
    // var endTime = new Date()
