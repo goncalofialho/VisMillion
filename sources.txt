@@ -24,3 +24,12 @@ https://github.com/quantmind/d3-canvas-transition
 https://bl.ocks.org/lsbardel/9f61d91fae37b50dac881939bd204e15
 https://bl.ocks.org/mbostock/9539958
 https://gist.github.com/coreyflynn/8a418be2a995adb91307fbeaad694c28 /* BEST WAY */
+
+
+HeatMap : https://bl.ocks.org/mostaphaRoudsari/0e5518ec336f16a1559b
+
+
+
+VIAGENS TRANSPORTES:
+https://data.cityofchicago.org/Transportation/Divvy-Trips/fg6s-gzvg
+https://data.cityofchicago.org/Transportation/Taxi-Trips/wrvz-psew

@@ -4,12 +4,16 @@ from time import sleep
 from threading import Thread
 from faker import Faker
 from random import randint
+import pandas as pd
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'secret!'
 socketio = SocketIO(app)
 THREAD = Thread()
 fake = Faker()
+csvfile = pd.read_csv('datasets/Taxi_Trips_full.csv', encoding='utf-8', nrows=10000)
+maximum = len(csvfile.index)
+
 
 class CountThread(Thread):
     """Stream data on Thread"""
@@ -23,12 +27,11 @@ class CountThread(Thread):
         """ GET DATA AND EMIT TO SOCKET """
         count = 0
         while True:
-            name = ""
-            for i in range(10):
-                name += (fake.name() + " , ")
-            data = dict(names=name[:-3])
-            socketio.send(randint(5,100))
+            socketio.send(int(csvfile.iloc[count]['Trip Seconds']))
+            print(csvfile.iloc[count]['Trip Seconds'])
             count += 1
+            if count > maximum:
+                exit()
             sleep(self.getDelay())
 
     def getDelay(self):
@@ -40,7 +43,6 @@ class CountThread(Thread):
     def run(self):
         """Default run method"""
         self.get_data()
-
 
 
 @socketio.on('my event')
@@ -55,11 +57,13 @@ def handle_pong(message):
     print("Ping data: " + message["data"])
     emit('pong', {"data": "Pong"})
 
+
 @socketio.on("delay")
 def update_delay(value):
     print("Changing delay from: " + str(THREAD.getDelay()) + "s to "+value['delay'] + "s")
     THREAD.setDelay(float(value['delay']))
     emit('delay', {"value": THREAD.getDelay()})
+
 
 @socketio.on('message')
 def handle_message(message):

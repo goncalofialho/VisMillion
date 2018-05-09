@@ -28,7 +28,7 @@ class Chart{
         this.dataContainer = d3.select(this.detachedContainer)
 
         this.x.domain([0,100])
-        this.y.domain([0,100])
+        this.y.domain([0,1000])
 
         var scalex = this.x
         var scaley = this.y
@@ -204,13 +204,13 @@ class Module{
     var startTime = new Date(endTime.getTime() - own_width / this.chart.pixelsPerSecond * 1000)
 
     if(this.type=="linechart"){
-        this.y = d3.scaleLinear().domain([0,100]).range([this.chart.height, 0])
+        this.y = d3.scaleLinear().domain(this.chart.y.domain()).range([this.chart.height, 0])
         this.x = d3.scaleTime().range([0, own_width])
 
         this.x.domain([startTime, endTime])
 
     }else if(this.type=="barchart"){
-        this.domain = [0,100]
+        this.domain = this.chart.y.domain()
         this.numBars = 10
 
         this.y = d3.scaleLinear().domain(0,10).range([this.chart.height])
@@ -223,7 +223,7 @@ class Module{
         this.chart.x = d3.scaleLinear().range([0, width - own_width])
 
     }else if(this.type=="scatterchart"){
-        this.y = d3.scaleLinear().domain([0,100]).range([this.chart.height, 0])
+        this.y = d3.scaleLinear().domain(this.chart.y.domain()).range([this.chart.height, 0])
         this.x = d3.scaleTime().range([0, own_width])
 
         this.x.domain([startTime, endTime])
