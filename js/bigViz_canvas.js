@@ -11,14 +11,13 @@ class Chart{
         this.width = width
         this.height = height
         this.margin = margin
-        /* TODO: APPLY MARGINS ON THIS */
         this.modules = []
         this.transitions = 100
         this.pixelsPerSecond = 10
         this.canvas = d3.select(".bigvis").append("canvas")
                 .attr('id','canvas')
-                .attr("width", this.width /*+ this.margin.left + this.margin.right*/)
-                .attr("height", this.height /*+ this.margin.top + this.margin.bottom*/)
+                .attr("width", this.width + this.margin.left + this.margin.right)
+                .attr("height", this.height + this.margin.top + this.margin.bottom)
             //.append("g")
             //    .attr("transform", "translate(" + this.margin.left + "," + this.margin.top + ")")
         this.x = d3.scaleLinear().range([0, width])
@@ -74,10 +73,11 @@ class Chart{
     var ts = new Date()
 
     /* AXIS */
+    var width = this.modules[0].type != "barchart" ? this.width :  this.width - (this.width / this.modules.length)
     var endTime = new Date(ts)
-    var startTime = new Date(endTime.getTime() - this.width / this.pixelsPerSecond * 1000)
+    var startTime = new Date(endTime.getTime() - width / this.pixelsPerSecond * 1000)
 
-    this.x = d3.scaleTime().range([0, this.width]).domain([startTime, endTime])
+    this.x = d3.scaleTime().range([0, width]).domain([startTime, endTime])
 
 
       this.modules.forEach(function(el){
@@ -99,25 +99,19 @@ class Chart{
         context = this.context,
         x = this.x,
         y = this.y,
-        height = this.height - 30;
-/*
-    context.beginPath();
-    ticks.forEach(function(d){
-        context.moveTo(x(d), height)
-        context.lineTo(x(d), height + tickSize)
-    })
-    context.strokeStyle = "black"
-    context.stroke()
-*/
+        height = this.height;
+        margin = this.margin;
+
 
       this.modules.forEach(function(el){
         el.draw()
       })
 
+    /* Y AXIS */
     context.beginPath()
     ticksY.forEach(function(d){
-        context.moveTo(25, y(d))
-        context.lineTo(15 + tickSize, y(d))
+        context.moveTo(15, margin.top + y(d))
+        context.lineTo(15 + tickSize, margin.top + y(d))
     })
     context.strokeStyle = "black"
     context.stroke()
@@ -126,16 +120,21 @@ class Chart{
     context.textAlign = "right"
     context.textBaseline = "middle"
     ticksY.forEach(function(d){
-        context.fillText(tickYFormat(d), tickSize + 10 , y(d))
+        context.fillText(tickYFormat(d), tickSize + 10 , margin.top + y(d))
     })
 
 
-
+    /* X AXIS */
     context.textAlign = "center"
     context.Baseline = "top"
+
+    var translate = this.modules[0].type == "barchart" ? this.width / this.modules.length : 0
     ticks.forEach(function(d){
-        context.fillText(tickFormat(d), x(d), (height + tickSize) + 10 )
+        context.fillText(tickFormat(d), x(d) + translate , height + margin.bottom + 10)
     })
+
+
+
 
 
     }
@@ -143,10 +142,19 @@ class Chart{
     clean_board(){
       var context = obj.context
       var dataContainer = obj.dataContainer
+      var fullWidth = this.width + this.margin.left + this.margin.right
+      var fullHeight = this.height + this.margin.top + this.margin.bottom
+      context.fillStyle = "#fff"
+      context.rect(0,0, fullWidth, fullHeight)
+      context.fill()
 
-      context.fillStyle = "#fff";
-      context.rect(0,0,this.width,this.height);
-      context.fill();
+      /* DEBUG BOX */
+      //context.beginPath()
+      context.strokeStyle = "black"
+      context.rect(this.margin.left,this.margin.right,this.width, this.height)
+      context.stroke()
+      //context.closePath()
+
     }
 
 
@@ -192,13 +200,13 @@ class Module{
     /* EACH IDIOM HAS ITS OWN AXIS SCALE */
     var own_width = this.chart.width / (this.chart.modules.length + 1)
     this.x1 = own_width * (this.chart.modules.length + 1)
+    var endTime = new Date()
+    var startTime = new Date(endTime.getTime() - own_width / this.chart.pixelsPerSecond * 1000)
 
     if(this.type=="linechart"){
         this.y = d3.scaleLinear().domain([0,100]).range([this.chart.height, 0])
         this.x = d3.scaleTime().range([0, own_width])
 
-        var endTime = new Date()
-        var startTime = new Date(endTime.getTime() - own_width / this.chart.pixelsPerSecond * 1000)
         this.x.domain([startTime, endTime])
 
     }else if(this.type=="barchart"){
@@ -212,12 +220,12 @@ class Module{
 
         this.bandwidth = this.chart.height / this.numBars
 
+        this.chart.x = d3.scaleLinear().range([0, width - own_width])
+
     }else if(this.type=="scatterchart"){
         this.y = d3.scaleLinear().domain([0,100]).range([this.chart.height, 0])
         this.x = d3.scaleTime().range([0, own_width])
 
-        var endTime = new Date()
-        var startTime = new Date(endTime.getTime() - own_width / this.chart.pixelsPerSecond * 1000)
         this.x.domain([startTime, endTime])
 
     }
@@ -249,10 +257,9 @@ class Module{
     var parent = this
 
     var lineGenerator = d3.line()
-                .x(function(d){ return parent.x1 + parent.x(d.ts); })
-                .y(function(d){ return parent.y(d.data); })
-                .curve(d3.curveCardinal)
-      //          .curve(d3.curveCardinal)
+                .x(function(d){ return parent.chart.margin.left + parent.x1 + parent.x(d.ts); })
+                .y(function(d){ return parent.chart.margin.top + parent.y(d.data); })
+                .curve(d3.curveBasis)
                   .context(context)
 
 
@@ -285,32 +292,6 @@ class Module{
     /* UPDATE DOMAINS */
     this.x = d3.scaleTime().range([0, own_width])
     this.x.domain([startTime, endTime])
-
-
-  /*
-    var dataContainer = this.chart.dataContainer
-
-    var own_width = this.chart.width / this.chart.modules.length
-    var n = 40
-
-    this.y = d3.scaleLinear().domain([0,10] ).range([this.chart.height - 10 , 0])
-    this.x = d3.scaleLinear().domain([0, n-1] ).range([0, own_width])
-
-    this.data = [Array.from({length: n}, (v, i) => [this.x(i), this.y(randomNumberBounds(0,10))])];
-    var dataBinding = dataContainer.selectAll('custom.linechart.module'+this.index)
-          .data(this.data, function(d) {return d; })
-    var parent = this
-
-    dataBinding.enter()
-          .append('custom')
-          .classed('linechart', true)
-          .classed('module'+this.index, true)
-          .attr('x', function(d){ return parent.x1})
-          .attr('fill', 'orange')
-*/
-
-
-
   }
 
   drawbarchart(){
@@ -318,8 +299,8 @@ class Module{
     var own_width = this.chart.width / this.chart.modules.length
 
     for(var i=0; i < this.barsData.length; i++){
-        let x = this.x1 + (own_width - this.x(this.barsData[i]))
-        let y = (this.chart.height - this.bandwidth) - (i * this.bandwidth)
+        let x = this.chart.margin.left + this.x1 + (own_width - this.x(this.barsData[i]))
+        let y = this.chart.margin.top + (this.chart.height - this.bandwidth) - (i * this.bandwidth)
         let width = this.x(this.barsData[i])
         let height = this.bandwidth
         let color = (parent.index == 0) ? 'blue' : 'orange'
@@ -331,18 +312,6 @@ class Module{
         context.closePath()
     }
 
-
-/*
-    var elements = this.chart.dataContainer.selectAll('custom.bars.module'+this.index)
-    elements.each(function(d){
-      var node = d3.select(this)
-      context.beginPath()
-      context.fillStyle = (parent.index == 0) ? 'blue' : 'orange'
-      context.rect(node.attr('x'), node.attr('y'), node.attr('width'), node.attr('height'))
-      context.fill()
-      context.closePath()
-
-    })*/
   }
 
   updatebarchart(ts){
@@ -376,58 +345,6 @@ class Module{
       parent.barsData[(Math.ceil(el.data/slices) - 1)] += 1
 
     })
-/*
-    TRY THIS FOR SMOOTH TRANSITIONS
-
-    var dataBinding = dataContainer.selectAll('custom.bars.module'+this.index)
-            .data(this.barsData, function(d){ return d; })
-
-    dataBinding.enter()
-            .append('custom')
-            .classed('bars', true)
-            .classed('module'+this.index, true)
-            .attr('height', this.bandwidth)
-            .attr('y', function(d,p){ return (parent.chart.height - parent.bandwidth) - (p * parent.bandwidth); })
-            .transition()
-            .duration(300)
-            .ease(d3.easeLinear)
-            .attr('width', function(d){ return parent.x(d)})
-            .attr('x', function(d){ return parent.x1 + (own_width - parent.x(d))})
-
-    dataBinding.transition()
-            .duration(300)
-            .ease(d3.easeLinear)
-            .attr('width', function(d){ return parent.x(d)})
-            .attr('x', function(d){ return parent.x1 + (own_width - parent.x(d))})
-
-    dataBinding.exit()
-            .remove()*/
-/*
-    var own_width = this.chart.width / this.chart.modules.length
-    var xscale = d3.scaleLinear().domain([0,220]).range([0, this.chart.width / this.chart.modules.length])
-    var parent = this
-
-    this.y = d3.scaleLinear().domain([0,100] ).range([this.chart.height, 0])
-    this.x = d3.scaleTime().range([0, own_width])
-
-
-    var values = groupBarChart()
-    var dataBinding = dataContainer.selectAll('custom.bars.module'+this.index)
-          .data(values, function(d){ return d; })
-
-    var bandwidth = this.chart.height / values.length ;
-    var color = d3.scaleOrdinal(d3.schemeCategory10);*/
-/*
-    dataBinding.enter()
-            .append('custom')
-            .classed('bars', true)
-            .classed('module'+this.index, true)
-            .attr('x', function(d){console.log(parent.x1); return parent.x1 + (own_width - xscale(d))})
-            .attr('height', bandwidth)
-            .attr('y', function(d,p){ return (height - bandwidth) - (p * bandwidth); })
-            //.transition()
-            .attr('width', function(d){ return xscale(d)})
-            .attr('fill', function(d,p){ return color(p)})*/
 
   }
 
@@ -436,8 +353,8 @@ class Module{
     var parent = this
 
     this.data.forEach(function(el){
-        let cx = parent.x1 + parent.x(el.ts)
-        let cy = parent.y(el.data)
+        let cx = parent.chart.margin.left + parent.x1 + parent.x(el.ts)
+        let cy = parent.chart.margin.top + parent.y(el.data)
         let r = 5
         let color = (parent.index == 0) ? 'blue' : 'orange'
         //let color = 'orange'
@@ -448,21 +365,6 @@ class Module{
       context.closePath()
 
     })
-/*
-
-    var elements = this.chart.dataContainer.selectAll('custom.scatterVals.module'+this.index)
-
-
-    elements.each(function(d){
-      var node = d3.select(this)
-
-      context.beginPath()
-      context.fillStyle = node.attr('fill')
-      context.arc(node.attr('cx'), node.attr('cy'), node.attr('r'), 0, 2 * Math.PI, false)
-      context.fill()
-      context.closePath()
-
-    })*/
   }
 
   updatescatterchart(ts){
@@ -487,83 +389,7 @@ class Module{
     this.x = d3.scaleTime().range([0, own_width])
     this.x.domain([startTime, endTime])
 
-    /*
-    var dataBinding = dataContainer.selectAll('custom.scatterVals.module'+this.index)
-        .data(bufferData, function(d){ return d; })
-
-    var dataBinding.data(bufferData).enter()
-        .append('custom')
-        .classed('scatterVals', true)
-        .classed('module'+this.index, true)
-        .attr('r', function(d) { return 5 /})
-        .attr('fill', function(d,p) { return 'orange'})
-        .attr('ts', function(d){ return d.ts})
-        .attr('cx', function(d) { return parent.x1 + parent.x(d.ts)})
-        .attr('cy', function(d) { return parent.y(d.data)})
-
-    dataBinding
-            .attr('cx', function(d) { return parent.x1 + parent.x(d.ts)})
-            .attr('cy', function(d) { return parent.y(d.data)})
-
-     dataBinding.exit()
-            .remove()
-    */
   }
 
 
 }
-
-
-/*
-    d3 version allows transitions
-
-  updatescatterchart(){
-    var dataContainer = this.chart.dataContainer
-
-    var own_width = this.chart.width / this.chart.modules.length
-    var parent = this
-
-    /* EACH IDIOM HAS ITS OWN AXIS SCALE */
-    //this.y = d3.scaleLinear().domain([min,max]).range([this.chart.height, 0])
-    //this.x = d3.scaleLinear().domain([0,100]).range([0, own_width])
-
-   // var endTime = new Date()
-  //  var startTime = new Date(endTime.getTime() - own_width / 10 * 1000)
-
-    /* REMOVING DATACONTAINER ELEMENTS THAT ARE NO LONGER NEEDED */
-  //  for(var i = 0; i < bufferData.length; i++){
- //       if(bufferData[i].ts > startTime.getTime())
-  //          break
-    //}
-   // bufferData.splice(0,i)
-
-
-    //console.log("bufferData length: "  + bufferData.length)
-  //  var dataBinding = dataContainer.selectAll('custom.scatterVals.module'+this.index)
-  //        .data(bufferData, function(d){ return d; })
-
-  //  var color = d3.scaleOrdinal(d3.schemeCategory10);
-
-
-    /* UPDATE DOMAINS */
-//    this.x.domain([startTime, endTime])
-    //this.y.domain([minScatter, maxScatter])
-
-    /*var dataBinding.data(bufferData).enter()
-            .append('custom')
-            .classed('scatterVals', true)
-            .classed('module'+this.index, true)
-            .attr('r', function(d) { return 5 /})
-            .attr('cx', function(d) { return parent.x1 + parent.x(d.ts)})
-            .attr('cy', function(d) { return parent.y(d.data)})
-            .attr('ts', function(d){ return d.ts})
-            .attr('fill', function(d,p) { return 'orange'})
-
-    dataBinding
-            .attr('cx', function(d) { return parent.x1 + parent.x(d.ts)})
-            .attr('cy', function(d) { return parent.y(d.data)})
-
-     dataBinding.exit()
-            .remove()
-    */
- // }
