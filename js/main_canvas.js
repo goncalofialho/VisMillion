@@ -45,8 +45,8 @@ $(document).ready(function(){
     }
     bufferData = arr*/
   //
-  obj.addModule('barchart')
-obj.addModule('linechart')
+    obj.addModule('barchart')
+    obj.addModule('linechart')
     obj.addModule('scatterchart')
 
     //obj.draw()

@@ -1,4 +1,4 @@
-var margin = {top: 20, right: 20, left: 20, bottom: 20}
+var margin = {top: 50, right: 30, left: 30, bottom: 20}
 var width = 800
 var height = 400
 var obj;
@@ -94,13 +94,14 @@ class Chart{
         tickSize = 6,
         ticks = this.x.ticks(tickCount),
         ticksY = this.y.ticks(tickCount),
-        tickYFormat = this.y.tickFormat(),
+        tickYFormat = d3.format('.0s'),
         tickFormat = this.x.tickFormat(),
         context = this.context,
         x = this.x,
         y = this.y,
-        height = this.height;
-        margin = this.margin;
+        height = this.height,
+        margin = this.margin,
+        width = this.width;
 
 
       this.modules.forEach(function(el){
@@ -110,8 +111,11 @@ class Chart{
     /* Y AXIS */
     context.beginPath()
     ticksY.forEach(function(d){
-        context.moveTo(15, margin.top + y(d))
-        context.lineTo(15 + tickSize, margin.top + y(d))
+        context.moveTo(margin.left, margin.top + y(d))
+        context.lineTo(margin.left-5 , margin.top + y(d))
+
+        context.moveTo(margin.left + width, margin.top + y(d))
+        context.lineTo(margin.left + width + 5 , margin.top + y(d))
     })
     context.strokeStyle = "black"
     context.stroke()
@@ -120,7 +124,11 @@ class Chart{
     context.textAlign = "right"
     context.textBaseline = "middle"
     ticksY.forEach(function(d){
-        context.fillText(tickYFormat(d), tickSize + 10 , margin.top + y(d))
+        context.textAlign = "right"
+        context.fillText(tickYFormat(d), margin.left-6 , margin.top + y(d))
+        context.textAlign = "left"
+        context.fillText(tickYFormat(d), margin.left + width + 6 , margin.top + y(d))
+
     })
 
 
@@ -130,7 +138,7 @@ class Chart{
 
     var translate = this.modules[0].type == "barchart" ? this.width / this.modules.length : 0
     ticks.forEach(function(d){
-        context.fillText(tickFormat(d), x(d) + translate , height + margin.bottom + 10)
+        context.fillText(tickFormat(d), x(d) + translate , height + margin.top  + 10)
     })
 
 
@@ -151,7 +159,7 @@ class Chart{
       /* DEBUG BOX */
       //context.beginPath()
       context.strokeStyle = "black"
-      context.rect(this.margin.left,this.margin.right,this.width, this.height)
+      context.rect(this.margin.left,this.margin.top,this.width, this.height)
       context.stroke()
       //context.closePath()
 
@@ -212,9 +220,14 @@ class Module{
     }else if(this.type=="barchart"){
         this.domain = this.chart.y.domain()
         this.numBars = 10
+        this.indexBars = 0
 
         this.y = d3.scaleLinear().domain(0,10).range([this.chart.height])
         this.x = d3.scaleLinear().domain(domain).range([0, own_width])
+
+        this.yScatter = d3.scaleLinear().domain(this.chart.y.domain()).range([this.chart.height, 0])
+        this.xScatter = d3.scaleTime().range([0, own_width])
+        this.xScatter.domain([startTime, endTime])
 
         this.barsData = new Array(this.numBars).fill(0)
 
@@ -292,25 +305,67 @@ class Module{
     /* UPDATE DOMAINS */
     this.x = d3.scaleTime().range([0, own_width])
     this.x.domain([startTime, endTime])
+    this.y.domain(this.chart.y.domain())
   }
 
   drawbarchart(){
     var context = this.chart.context
     var own_width = this.chart.width / this.chart.modules.length
+    var parent = this
+    var max = Math.max.apply(Math, this.domain)
+    var slices = max/this.numBars
+
+    if(this.chart.modules.length > this.index + 1 == false || this.chart.modules[this.index+1].type == 'scatterchart'){
+
+        this.data.forEach(function(el){
+
+        if(! (parent.xScatter(el.ts) > parent.x(parent.barsData[(Math.ceil(el.data/slices) - 1)]))){
+
+            return
+        }
+
+            let cx = parent.chart.margin.left + parent.x1 + parent.xScatter(el.ts)
+            let cy = parent.chart.margin.top + parent.yScatter(el.data)
+            let r = 5
+            let color = (parent.index == 0) ? 'blue' : 'orange'
+
+            context.beginPath()
+            context.fillStyle = color
+            context.arc(cx, cy, r, 0, 2 * Math.PI, false)
+            context.fill()
+            context.closePath()
+        })
+    }
+
+
 
     for(var i=0; i < this.barsData.length; i++){
-        let x = this.chart.margin.left + this.x1 + (own_width - this.x(this.barsData[i]))
-        let y = this.chart.margin.top + (this.chart.height - this.bandwidth) - (i * this.bandwidth)
-        let width = this.x(this.barsData[i])
-        let height = this.bandwidth
-        let color = (parent.index == 0) ? 'blue' : 'orange'
+        let x,y,width,height,color;
 
+
+        if(this.chart.modules.length > this.index + 1 == false || this.chart.modules[this.index+1].type == 'scatterchart'){
+            //console.log('first way')
+            x = this.chart.margin.left + this.x1
+            y = this.chart.margin.top + (this.chart.height - this.bandwidth) - (i * this.bandwidth)
+            width = this.x(this.barsData[i])
+            height = this.bandwidth
+        }else{
+            //console.log('second way')
+            x = this.chart.margin.left + this.x1 + (own_width - this.x(this.barsData[i]))
+            y = this.chart.margin.top + (this.chart.height - this.bandwidth) - (i * this.bandwidth)
+            width = this.x(this.barsData[i])
+            height = this.bandwidth
+        }
+
+
+        color = (this.index == 0) ? 'blue' : 'orange'
         context.beginPath()
         context.fillStyle = color
         context.rect(x,y,width,height)
         context.fill()
         context.closePath()
     }
+
 
   }
 
@@ -338,13 +393,34 @@ class Module{
     var max = Math.max.apply(Math, this.domain)
     var slices = max/this.numBars
 
-    parent.barsData = new Array(this.numBars).fill(0)
-    this.data.forEach(function(el){
-    //console.log((Math.ceil(el.data/slices) - 1))
+/*
+    if(parent.chart.modules.length > parent.index + 1 == false || parent.chart.modules[parent.index+1].type == 'scatterchart'){
+        for(let j = this.indexBars; j < )
+    }else{
 
-      parent.barsData[(Math.ceil(el.data/slices) - 1)] += 1
+    }*/
+
+
+    var oldArray = parent.barsData
+    this.barsData = new Array(this.numBars).fill(0)
+    this.data.forEach(function(el,index){
+    // SOMETHING WRONG GOING ON HERE
+        if(parent.chart.modules.length > parent.index + 1 == false || parent.chart.modules[parent.index+1].type == 'scatterchart'){
+            if(! (parent.xScatter(el.ts) > parent.x(parent.barsData[(Math.ceil(el.data/slices) - 1)]))){
+                parent.barsData[(Math.ceil(el.data/slices) - 1)] += 1
+            }
+        }else{
+            parent.barsData[(Math.ceil(el.data/slices) - 1)] += 1
+        }
 
     })
+
+    /* UPDATE DOMAINS */
+    this.xScatter = d3.scaleTime().range([0, own_width])
+    this.xScatter.domain([startTime, endTime])
+    this.y.domain(this.chart.y.domain())
+
+
 
   }
 
@@ -388,7 +464,7 @@ class Module{
     /* UPDATE DOMAINS */
     this.x = d3.scaleTime().range([0, own_width])
     this.x.domain([startTime, endTime])
-
+    this.y.domain(this.chart.y.domain())
   }
 
 
