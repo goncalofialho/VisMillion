@@ -28,7 +28,7 @@ class Chart{
         this.dataContainer = d3.select(this.detachedContainer)
 
         this.x.domain([0,100])
-        this.y.domain([0,1000])
+        this.y.domain([0,2000])
 
         var scalex = this.x
         var scaley = this.y
