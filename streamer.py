@@ -47,7 +47,8 @@ class CountThread(Thread):
             count += 1
             if count >= maximum:
                 exit()
-            sleep(delta)
+            #sleep(delta)
+            sleep(self.getDelay())
 
     def getDelay(self):
         return self.delay
@@ -104,7 +105,7 @@ def connect_socket():
         print("Started streaming")
         THREAD = CountThread()
         THREAD.start()
-        emit('delay', {"value": THREAD.getDelay()})
+    emit('delay', {"value": THREAD.getDelay()})
 
 
 if __name__ == '__main__':

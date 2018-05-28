@@ -3,6 +3,7 @@ seedBarChart()
 var fps, time0, time1;
 var domain = [0,100]
 var arr;
+var timerControl;
 $(document).ready(function(){
 
     width = $('.container').width()
@@ -24,40 +25,33 @@ $(document).ready(function(){
         var mod_type = $(this).find('option:selected').attr('chart')
         obj.addModule(mod_type)
       })
-      //for(var i = 0; i < parseInt($('.graph_init input').val()); i++)
-    /*    obj.addModule("barchart")
-        obj.addModule("linechart")
-        obj.addModule("scatterchart")*/
+
 
       $("#init_button").attr('disabled', true)
       $('.graph_init input').attr('disabled', true)
       $('select').attr('disabled',true)
 
     })
-    /*
-    arr = []
-	var ts = new Date().getTime()
-	for(let i = 0; i<50 ; i++){
-		var newts = ts - (i * randomNumberBounds(100,300))
-		arr.push({ts: newts,
-				data: randomNumberBounds(20,80)})
-		ts = newts
-    }
-    bufferData = arr*/
-  //
+
+    $( "#streamDelay" ).slider({
+        min:0.001,
+        max:2,
+        step:0.01,
+        value:1,
+        slide: function(event, ui){
+            $(this).parent().find('p.ammount').text("1 package per " + ui.value + " seconds")
+            streamDelay(ui.value.toString())
+        }
+    });
+
     obj.addModule('barchart')
     obj.addModule('linechart')
     obj.addModule('scatterchart')
 
-    //obj.draw()
-    //randomScatterValues()
-
-
 
     /* CONNECT WEBSOCKET */
     connect()
-    d3.timer(obj.draw_update)
-    //obj.draw_update()
+    timerControl = d3.timer(obj.draw_update)
 
 });
 

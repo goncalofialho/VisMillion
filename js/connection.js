@@ -1,5 +1,6 @@
 var socket;
 var minScatter = null; maxScatter = null;
+var packs = 0;
 function connect(){
     socket = io.connect('http://' + document.domain + ':' + 8002);
 
@@ -8,28 +9,21 @@ function connect(){
     });
 
     socket.on('message', function(data){
-      //  console.log(data)
-      if(minScatter == null && maxScatter == null){
-        minScatter = data
-        maxScatter = data
-      }
-      if(data > maxScatter){
-        maxScatter = data
-      }
-      if(data < minScatter){
-        minScatter = data
-      }
 
         var now = new Date()
         obj.modules[obj.modules.length-1].data.push({
                 ts: now.getTime() ,
                 data: data
             })
+        packs += 1
+        $('#package-count p i').text(packs)
        // $('.output').append('<p>'+data["names"]+'</p>')
     })
 
 
     socket.on('delay', function(data){
+        $('.options > span:first-child p.ammount').text("1 package per " + data["value"] + " seconds")
+        $('#streamDelay').slider('value',data["value"])
         $('#delay span').text(data["value"])
     })
 }

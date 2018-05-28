@@ -5,3 +5,96 @@
 .selects select {
   margin-right: 10px;
 }
+
+.options{
+    width: 100%;
+    float: left;
+}
+.options > span{
+    margin: 10px 0px;
+    float: left;
+    width: 100%;
+}
+.options span p{
+    width: auto;
+    float: left;
+    margin: 0px 10px;
+}
+.options span #streamDelay{
+    width: 300px;
+    float: left;
+    margin: 6px 0px;
+    margin-left:10px;
+}
+
+
+.modules-options{
+    width:100%;
+    margin-top:20px;
+}
+
+.mod-option{
+    width:25%;
+    float:left;
+    padding: 0 10px;
+}
+
+.modules-options .mod-option h3{
+    text-align:center;
+    text-transform: capitalize;
+}
+.modules-options .mod-option .lineChartColors p{
+
+}
+.modules-options .mod-option .lineChartColors p > span{
+    text-align: left;
+    width: 75%;
+}
+
+.modules-options .mod-option p{
+    width:100%;
+    float:left;
+}
+.modules-options .mod-option .ui-slider{
+    float:left;
+    width:100%;
+}
+.modules-options .mod-option fieldset{
+    display: block;
+    -webkit-margin-start: 2px;
+    -webkit-margin-end: 2px;
+    -webkit-padding-before: 0.35em;
+    -webkit-padding-start: 0.75em;
+    -webkit-padding-end: 0.75em;
+    -webkit-padding-after: 0.625em;
+    min-width: -webkit-min-content;
+    border-width: 2px;
+    border-style: groove;
+    border-color: threedface;
+    border-image: initial;
+    padding-bottom: 0px;
+    margin-bottom: 10px;
+}
+.modules-options .mod-option fieldset legend{
+    display: block;
+    -webkit-padding-start: 2px;
+    -webkit-padding-end: 2px;
+    border-width: initial;
+    border-style: none;
+    border-color: initial;
+    border-image: initial;
+    font-size: 16px;
+    width: auto;
+}
+.modules-options .mod-option fieldset p > span {
+    text-align: left;
+    width: 75%;
+    float:left;
+}
+
+
+.modules-options .mod-option fieldset > span.radiobuttons {
+    width: 50%;
+    float: left;
+    text-align: center;
+}

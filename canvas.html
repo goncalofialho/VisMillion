@@ -10,19 +10,32 @@
     <link rel="stylesheet" href="css/vendor/bootstrap.min.css">
     <link rel="stylesheet" href="css/chart.css">
     <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="js/vendor/spectrum.css">
+    <link rel="stylesheet" href="js/vendor/jquery-ui.css">
 
     <script type="text/javascript" src="js/vendor/jquery-3.3.1.min.js"></script>
+    <script type="text/javascript" src="js/vendor/jquery-ui.js"></script>
     <script type="text/javascript" src="js/vendor/socket.io.min.js"></script>
     <script type="text/javascript" src="js/vendor/d3.v4.min.js"></script>
+    <script type="text/javascript" src="js/vendor/spectrum.js"></script>
 </head>
 
 <body>
 <div class="container">
     <h2>WebSocket Test</h2>
-    <p id="delay">1 package per <span>?</span> seconds</p>
+
+    <div class="options">
+        <span id="package-count">
+            <p>Already received <i>0</i> data elements</p>
+        </span>
+        <span>
+            <p class="ammount">1 package per 1 seconds</p>
+            <div id="streamDelay"></div>
+        </span>
+    </div>
     <p id="fps">FPS: <span></span></p>
     <div class="graph_init">
-      <div class="row">
+      <div class="row"><!--
           <div class="input-group mb-3 col-md-4">
           <div class="input-group-prepend">
             <span class="input-group-text" id="inputGroup-sizing-default">N Graphs: </span>
@@ -43,7 +56,7 @@
             <option chart="linechart">LineChart</option>
             <option chart="scatterchart">ScatterChart</option>
           </select>
-        </div>
+        </div>-->
       </div>
     </div>
     <div class="output">
@@ -52,6 +65,11 @@
     <div class="graph"></div>
 
     <div class="bigvis"></div>
+
+    <div class="modules-options">
+
+
+    </div>
 </div>
 </body>
 

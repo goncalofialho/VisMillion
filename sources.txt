@@ -17,6 +17,10 @@ CSV BID - https://www.kaggle.com/datasets?sortBy=hottest&group=public&page=1&pag
 
 REALLY IMPORTANT D3 STREAMING - https://www.youtube.com/watch?v=Lc2TA0-gZqg
 
+BOA PARA A ESCRITA DA TESE  - https://www.codementor.io/znation/3-steps-to-scalable-data-visualization-in-react-js-d3-js-8t7kjxnk5
+
+
+
 
 Transições em canvas sem DOM elements:
 http://bl.ocks.org/JMStewart/e6efab7dc6ca09702adb
