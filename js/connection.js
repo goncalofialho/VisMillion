@@ -11,6 +11,7 @@ function connect(){
     socket.on('message', function(data){
 
         var now = new Date()
+
         obj.modules[obj.modules.length-1].data.push({
                 ts: now.getTime() ,
                 data: data

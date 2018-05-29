@@ -338,6 +338,12 @@ class Module{
         this.dotsColor = 'orange'
         this.dotsRadius = 5
 
+        this.squareLength = 10
+        this.scatterBoxes = []
+        this.scaleColor = d3.scaleLinear().domain([0,10]).range(['transparent','blue']).interpolate(d3.interpolateRgb)
+
+
+
     }
 
     this.appendModuleOptions()
@@ -878,6 +884,8 @@ class Module{
     var color = this.dotsColor;
     var r = this.dotsRadius;
 
+
+
     this.data.forEach(function(el){
         let cx = parent.chart.margin.left + parent.x1 + parent.x(el.ts)
         let cy = parent.chart.margin.top + parent.y(el.data)
@@ -888,7 +896,34 @@ class Module{
       context.fill()
       context.closePath()
 
-    })
+    })/*
+    var squareLength = 20
+    for(var i = 0; i < this.x.range()[1]; i+= squareLength){
+        for(var j=0; j < this.y.range()[0]; j+= squareLength){
+            let x = parent.x1 + parent.chart.margin.left + i
+            let y = parent.chart.margin.top + j
+            let width = squareLength
+            context.beginPath()
+            context.rect(x, y, squareLength, squareLength)
+            context.strokeStyle = 'black'
+            context.stroke()
+            context.closePath()
+        }
+    }*/
+
+    for(let i = 0; i < this.scatterBoxes.length; i++){
+        for(let j = 0; j < this.scatterBoxes[i].vals.length; j++){
+            let x = parent.x1 + parent.chart.margin.left + parent.x(this.scatterBoxes[i].ts)
+            let y = parent.chart.margin.top + (j * this.squareLength)
+            let width = this.squareLength
+            let color = this.scaleColor(this.scatterBoxes[i].vals[j])
+            context.beginPath()
+            context.rect(x, y, width, width)
+            context.fillStyle = color
+            context.fill()
+            context.closePath()
+        }
+    }
   }
 
   updatescatterchart(ts){
@@ -913,6 +948,55 @@ class Module{
     this.x = d3.scaleTime().range([0, own_width])
     this.x.domain([startTime, endTime])
     this.y.domain(this.chart.y.domain())
+
+    /* GENERATING BINNING CHART */
+    var timeInterval = this.x.domain()
+    var squareLength = this.squareLength
+    var scale = d3.scaleTime().domain(timeInterval).range([0, Math.ceil( own_width / squareLength)])
+    var delta = scale.invert(1).getTime() - scale.invert(0).getTime()
+
+    /* POPULATE Boxes */
+
+    if (this.scatterBoxes.length == 0){
+        this.scatterDomain = this.x
+        for(let i = 0; i < Math.ceil(own_width / squareLength) + 1; i++){
+            this.scatterBoxes.push({
+                ts: timeInterval[0].getTime() + (i * delta),
+                vals: new Array(Math.ceil(this.y.range()[0] / squareLength)).fill(0)
+            })
+        }
+    }
+    if(this.scatterBoxes[0].ts + delta < this.x.domain()[0].getTime() ){
+        this.scatterBoxes.splice(0,1)
+        this.scatterBoxes.push({
+            ts: this.scatterBoxes[this.scatterBoxes.length - 1].ts + delta,
+            vals: new Array(Math.ceil(this.y.range()[0] / squareLength)).fill(0)
+        })
+    }
+
+    var startScale = new Date(this.scatterBoxes[this.scatterBoxes.length - 2].ts )
+    var endScale = new Date(this.scatterBoxes[this.scatterBoxes.length - 1].ts + delta)
+
+    var yCells = Math.ceil(this.chart.height / squareLength)
+    var scaleY = d3.scaleLinear().domain(this.y.domain()).range([yCells,0])
+    var scatterBoxes = this.scatterBoxes
+
+    var newElements = this.data.filter( el => el.ts > startScale.getTime() && el.ts <= startScale.getTime() + delta)
+    scatterBoxes[this.scatterBoxes.length - 2].vals = new Array(Math.ceil(this.y.range()[0] / squareLength)).fill(0)
+    newElements.forEach(function(el){
+        if(Math.ceil(scaleY(el.data)) <= yCells && Math.ceil(scaleY(el.data)) >= 0)
+            scatterBoxes[scatterBoxes.length - 2].vals[Math.ceil(scaleY(el.data)) - 1] += 1
+    })
+
+    var newElements = this.data.filter( el => el.ts > startScale.getTime() + delta && el.ts <= endScale.getTime())
+    scatterBoxes[scatterBoxes.length - 1].vals = new Array(Math.ceil(this.y.range()[0] / squareLength)).fill(0)
+    newElements.forEach(function(el){
+        if(Math.ceil(scaleY(el.data)) <= yCells && Math.ceil(scaleY(el.data)) >= 0)
+            scatterBoxes[scatterBoxes.length - 1].vals[Math.ceil(scaleY(el.data)) - 1] += 1
+    })
+
+
+
   }
 
 
