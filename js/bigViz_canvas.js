@@ -45,18 +45,21 @@ class Chart{
         var markup = `
             <div class="mod-option">
                 <h3>${options.title}</h3>
-                <p>
-                    <span id="PixelsPerSecondSpan">Pixels Per Second: ${options.pixelsPerSecond}</span>
-                    <div id="pixelSecond"></div>
-                <p>
-                <p>
-                    <span id="yDomainSpan">Y Domain: ${options.maxYDomain}</span>
-                    <div id="yDomain"></div>
-                </p>
-                <p>
-                    <span>Background Color: </span>
-                    <input type="text" id="chart-bg" />
-                </p>
+                <fieldset id="chartOptions">
+                    <legend>Select Flow </legend>
+                    <p>
+                        <span id="PixelsPerSecondSpan">Pixels Per Second: ${options.pixelsPerSecond}</span>
+                        <div id="pixelSecond"></div>
+                    <p>
+                    <p>
+                        <span id="yDomainSpan">Y Domain: ${options.maxYDomain}</span>
+                        <div id="yDomain"></div>
+                    </p>
+                    <p>
+                        <span>Background Color: </span>
+                        <input type="text" id="chart-bg" />
+                    </p>
+                </fieldset>
             </div>
         `
 
@@ -340,7 +343,9 @@ class Module{
 
         this.squareLength = 10
         this.scatterBoxes = []
-        this.scaleColor = d3.scaleLinear().domain([0,10]).range(['transparent','blue']).interpolate(d3.interpolateRgb)
+        this.squareColor = 'blue'
+        this.squareDensity = 10
+        this.scaleColor = d3.scaleLinear().domain([0,this.squareDensity]).range(['transparent',this.squareColor]).interpolate(d3.interpolateRgb)
 
 
 
@@ -366,7 +371,7 @@ class Module{
             <div class="mod-option">
                 <h3>${options.title}</h3>
                 <fieldset id="linechart${options.index}">
-                    <legend>Select Flow: </legend>
+                    <legend>Select Flow </legend>
                     <span class="radiobuttons" >
                         <label for="${options.index}radio-1">Low</label>
                         <input type="radio" name="${options.index}radio-1" id="${options.index}radio-1">
@@ -378,7 +383,7 @@ class Module{
                 </fieldset>
 
                 <fieldset class="lineChartColors">
-                    <legend>High Flow:</legend>
+                    <legend>High Flow</legend>
                     <p>
                          <span id="boxPlotStepsText${options.index}">BoxPlot Steps: ${options.boxPlotSteps} </span>
                          <div id="boxPlotSteps${options.index}"></div>
@@ -472,14 +477,19 @@ class Module{
         var markup = `
             <div class="mod-option">
                 <h3>${options.title}</h3>
-                <p>
-                    <span>Bars Color: </span>
-                    <input type="text" id="barsColor${options.index}" />
-                </p>
-                <p>
-                     <span id="maxWidthVal${options.index}">Max Width: ${options.maxWidth} % </span>
-                     <div id="maxWidth${options.index}"></div>
-                </p>
+                <fieldset id="High-Flow${options.index}">
+                    <legend>Options </legend>
+                    <p>
+                        <span id="maxWidthVal${options.index}">Max Width: ${options.maxWidth} % </span>
+                        <div id="maxWidth${options.index}"></div>
+                    </p>
+                    <p>
+                        <span>Bars Color: </span>
+                        <input type="text" id="barsColor${options.index}" />
+                    </p>
+                </fieldset>
+
+
             </div>
         `
 
@@ -513,19 +523,36 @@ class Module{
             title: this.type,
             dotsColor: this.dotsColor,
             dotsRadius: this.dotsRadius,
-            index: this.index
+            index: this.index,
+            squareDensity: this.squareDensity
         }
         var markup = `
             <div class="mod-option">
                 <h3>${options.title}</h3>
-                <p>
-                    <span>Dots Color: </span>
-                    <input type="text" id="dotsColor${options.index}" />
-                </p>
-                <p>
-                     <span id="dotsRadiusVal${options.index}">Dots Radius: ${options.dotsRadius} </span>
-                     <div id="dotsRadius${options.index}"></div>
-                </p>
+                <fieldset id="High-Flow${options.index}">
+                    <legend>Low Flow </legend>
+                    <p>
+                         <span id="dotsRadiusVal${options.index}">Dots Radius: ${options.dotsRadius} </span>
+                         <div id="dotsRadius${options.index}"></div>
+                    </p>
+                    <p>
+                        <span>Dots Color: </span>
+                        <input type="text" id="dotsColor${options.index}" />
+                    </p>
+                </fieldset>
+
+                <fieldset id="High-Flow${options.index}">
+                    <legend>High Flow </legend>
+                    <p>
+                         <span id="squareDensityText${options.index}">Square Density: ${options.squareDensity} </span>
+                         <div id="squareDensity${options.index}"></div>
+                    </p>
+                    <p>
+                        <span>Square Color: </span>
+                        <input type="text" id="square-color${options.index}" />
+                    </p>
+                </fieldset>
+
             </div>
         `
 
@@ -541,6 +568,14 @@ class Module{
                 module.dotsColor = color.toRgbString()
             }
         })
+        $('#square-color'+options.index).spectrum({
+            color: module.squareColor,
+            preferredFormat: "rgb",
+            showButtons: false,
+            move: function(color){
+                module.scaleColor = d3.scaleLinear().domain([0,module.squareDensity]).range(['transparent',color.toRgbString()]).interpolate(d3.interpolateRgb)
+            }
+        })
 
         $('#dotsRadius'+options.index).slider({
             min:1,
@@ -551,7 +586,19 @@ class Module{
                 $(this).parent().find('#dotsRadiusVal'+module.index).text("Dots Radius: "+ ui.value)
                 module.dotsRadius = ui.value
             }
+        })
 
+        $('#squareDensity'+options.index).slider({
+            min:1,
+            max:50,
+            step:1,
+            value: module.squareDensity,
+            slide: function(event, ui){
+                $(this).parent().find('#squareDensityText'+module.index).text("Square Density: "+ ui.value)
+                module.squareDensity = ui.value
+                module.scaleColor.domain([0,module.squareDensity])
+
+            }
         })
     }
   }
