@@ -1,114 +1,81 @@
 <!DOCTYPE html>
 <html lang="en">
+        <div class="input-group mb-3
 <head>
     <meta charset="UTF-8">
-    <title>Title</title>
-        <script type="text/javascript" src="js/vendor/d3.v4.min.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 
+    <title>Title</title>
+
+    <link rel="stylesheet" href="css/vendor/bootstrap.min.css">
+    <link rel="stylesheet" href="css/chart.css">
+    <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="js/vendor/spectrum.css">
+    <link rel="stylesheet" href="js/vendor/jquery-ui.css">
+<!--
+    <script data-main="js/modules/main" src="js/require.js"></script>
+  --> <script type="text/javascript" src="js/vendor/jquery-3.3.1.min.js"></script>
+    <script type="text/javascript" src="js/vendor/jquery-ui.js"></script>
+    <script type="text/javascript" src="js/vendor/socket.io.min.js"></script>
+    <script type="text/javascript" src="js/vendor/d3.v4.min.js"></script>
+    <script type="text/javascript" src="js/vendor/d3-hexbin.js"></script>
+    <script type="text/javascript" src="js/vendor/d3.canvas-hexbin.js"></script>
+    <script type="text/javascript" src="js/vendor/spectrum.js"></script>
 </head>
+
 <body>
-    <div class="container">
+<div class="container">
+    <h2>WebSocket Test</h2>
+
+    <div class="options">
+        <span id="package-count">
+            <p>Already received <i>0</i> data elements</p>
+        </span>
+        <span>
+            <p class="ammount">1 package per 1 seconds</p>
+            <div id="streamDelay"></div>
+        </span>
+    </div>
+    <p id="fps">FPS: <span></span></p>
+    <div class="graph_init">
+      <div class="row"><!--
+          <div class="input-group mb-3 col-md-4">
+          <div class="input-group-prepend">
+            <span class="input-group-text" id="inputGroup-sizing-default">N Graphs: </span>
+          </div>
+          <input type="number" min="0" value="1" class="form-control" aria-label="Default" aria-describedby="inputGroup-sizing-default">
+
+
+          <button id="init_button"  type="button" class="btn btn-primary ">Iniciar!</button>
+        </div>
+        <div class="input-group col-md-8 selects ">
+          <select class="form-control col-md-2 d-none">
+            <option chart="barchart" selected>Barchart</option>
+            <option chart="linechart">LineChart</option>
+            <option chart="scatterchart">ScatterChart</option>
+          </select>
+          <select class="form-control col-md-2">
+            <option chart="barchart" selected>Barchart</option>
+            <option chart="linechart">LineChart</option>
+            <option chart="scatterchart">ScatterChart</option>
+          </select>
+        </div>-->
+      </div>
+    </div>
+    <div class="output">
 
     </div>
+    <div class="graph"></div>
+
+    <div class="bigvis"></div>
+
+    <div class="modules-options">
+
+
+    </div>
+</div>
 </body>
-<script>
+    <script type="text/javascript" src="js/bundle.js"></script>
+    <script type="text/javascript" src="js/connection.js"></script>
 
-    var canvas  =  d3.select(".container").append("canvas")
-            .attr('id','canvas')
-            .attr("width", 1000)
-            .attr("height", 600)
-
-
-    var ctx = canvas.node().getContext("2d")
-
-    var hexHeight,
-        hexRadius,
-        hexRectangleHeight,
-        hexRectangleWidth,
-        hexagonAngle = 0.523598776, // 30 degrees in radians
-        sideLength = 36,
-        boardWidth = 15,
-        boardHeight = 10;
-
-    hexHeight = Math.sin(hexagonAngle) * sideLength;
-    hexRadius = Math.cos(hexagonAngle) * sideLength;
-    hexRectangleHeight = sideLength + 2 * hexHeight;
-    hexRectangleWidth = 2 * hexRadius;
-
-  ctx.fillStyle = "#000000";
-        ctx.strokeStyle = "#CCCCCC";
-        ctx.lineWidth = 1;
-
-
-    drawBoard(ctx, boardWidth, boardHeight);
-/*
-document.getElementById('canvas').addEventListener("mousemove", function(eventInfo) {
-            var x,
-                y,
-                hexX,
-                hexY,
-                screenX,
-                screenY;
-
-            x = eventInfo.offsetX || eventInfo.layerX;
-            y = eventInfo.offsetY || eventInfo.layerY;
-
-
-            hexY = Math.floor(y / (hexHeight + sideLength));
-            hexX = Math.floor((x - (hexY % 2) * hexRadius) / hexRectangleWidth);
-
-            screenX = hexX * hexRectangleWidth + ((hexY % 2) * hexRadius);
-            screenY = hexY * (hexHeight + sideLength);
-
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-            drawBoard(ctx, boardWidth, boardHeight);
-
-            // Check if the mouse's coords are on the board
-            if(hexX >= 0 && hexX < boardWidth) {
-                if(hexY >= 0 && hexY < boardHeight) {
-                    ctx.fillStyle = "#000000";
-                    drawHexagon(ctx, screenX, screenY, true);
-                }
-            }
-        });
-*/
-
-
-    function drawBoard(canvasContext, width, height) {
-        var i,
-            j;
-
-        for(i = 0; i < width; ++i) {
-            for(j = 0; j < height; ++j) {
-                drawHexagon(
-                    ctx,
-                    i * hexRectangleWidth + ((j % 2) * hexRadius),
-                    j * (sideLength + hexHeight),
-                    false
-                );
-            }
-        }
-    }
-
-    function drawHexagon(canvasContext, x, y, fill) {
-        var fill = fill || false;
-
-        canvasContext.beginPath();
-        canvasContext.moveTo(x + hexRadius, y);
-        canvasContext.lineTo(x + hexRectangleWidth, y + hexHeight);
-        canvasContext.lineTo(x + hexRectangleWidth, y + hexHeight + sideLength);
-        canvasContext.lineTo(x + hexRadius, y + hexRectangleHeight);
-        canvasContext.lineTo(x, y + sideLength + hexHeight);
-        canvasContext.lineTo(x, y + hexHeight);
-        canvasContext.closePath();
-
-        if(fill) {
-            canvasContext.fill();
-        } else {
-            canvasContext.stroke();
-        }
-    }
-
-</script>
 </html>

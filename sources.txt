@@ -37,3 +37,6 @@ HeatMap : https://bl.ocks.org/mostaphaRoudsari/0e5518ec336f16a1559b
 VIAGENS TRANSPORTES:
 https://data.cityofchicago.org/Transportation/Divvy-Trips/fg6s-gzvg
 https://data.cityofchicago.org/Transportation/Taxi-Trips/wrvz-psew
+
+
+http://profs.etsmtl.ca/mmcguffin/research/2012-viau-connectedCharts/viau-eurovis2012-connectedCharts.pdf

@@ -1,0 +1,32 @@
+{
+  "name": "vismillion",
+  "version": "1.0.0",
+  "description": "A d3 module for BD visualization in real time",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified \" && exit 1",
+    "rollup": "rollup -c --watch"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Portulinas/VisMillion.git"
+  },
+  "author": "Gonçalo Fialho",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Portulinas/VisMillion/issues"
+  },
+  "homepage": "https://github.com/Portulinas/VisMillion#readme",
+  "devDependencies": {
+    "budo": "^11.2.2",
+    "livereload": "^0.7.0",
+    "npm-run-all": "^4.1.3",
+    "rollup": "^0.59.4",
+    "rollup-plugin-livereload": "^0.6.0",
+    "rollup-plugin-serve": "^0.4.2",
+    "rollup-watch": "^4.3.1",
+    "watchify": "^3.11.0",
+    "webpack": "^4.10.2",
+    "webpack-dev-server": "^3.1.4"
+  }
+}
