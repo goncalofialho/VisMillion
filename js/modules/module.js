@@ -3,6 +3,8 @@ export class Module{
     constructor(options){
         if(this.constructor === Module){
             throw new Error('Cannot instantiate abstract class named: ' + this.constructor.name)
+        }else if(options.chart == undefined){
+            throw new Error('Chart not specified at options')
         }
         this.chart = options.chart
         this.index = options.index

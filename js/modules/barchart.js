@@ -89,14 +89,7 @@ export class Barchart extends Module{
         var endTime = new Date(ts - ((this.own_width / this.chart.pixelsPerSecond * 1000) * ((this.chart.modules.length - 1) - this.index) ))
         var startTime = new Date(endTime.getTime() - this.own_width / this.chart.pixelsPerSecond * 1000)
 
-        /* REMOVING DATA ELEMENTS THAT ARE NO LONGER NEEDED */
-        for(var i = 0; i < this.data.length; i++){
-            if(this.data[i].ts > startTime.getTime())
-                break
-        }
-        if(this.index != 0){
-            this.chart.transferData(this.index, this.data.splice(0,i),this.chart)
-        }
+        this.data = this.chart.filterData(null, endTime)
 
         var max = Math.max.apply(Math, this.domain)
         var slices = max/this.numBars

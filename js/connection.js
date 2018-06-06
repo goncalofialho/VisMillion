@@ -1,7 +1,7 @@
 var socket;
 var minScatter = null; maxScatter = null;
 var packs = 0;
-function connect(){
+function connect(chart){
     socket = io.connect('http://' + document.domain + ':' + 8002);
 
     socket.on('pong', function(){
@@ -12,10 +12,15 @@ function connect(){
 
         var now = new Date()
 
-        obj.modules[obj.modules.length-1].data.push({
+        chart.data.push({
+            ts: now.getTime(),
+            data: data
+        })
+
+/*        obj.modules[obj.modules.length-1].data.push({
                 ts: now.getTime() ,
                 data: data
-            })
+            })*/
         packs += 1
         $('#package-count p i').text(packs)
        // $('.output').append('<p>'+data["names"]+'</p>')

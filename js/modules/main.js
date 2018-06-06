@@ -2,10 +2,12 @@ import { Chart } from './chart.js'
 import { Linechart } from './linechart.js'
 import { Scatterchart} from './scatterchart.js'
 import { Barchart} from './barchart.js'
+import { Connection } from './connection.js'
 
 
 var timerControl;
-var obj
+var obj;
+var connection;
 $(document).ready(function(){
 
     // CHART
@@ -17,9 +19,10 @@ $(document).ready(function(){
         pixelsPerSecond: 10,
         bgColor: '#fff',
         xDomain: [0,100],
-        yDomain: [0,2000]
+        yDomain: [0,2000],
     })
 
+    // MODULES
     var module1 = new Barchart({
         chart : obj,
         index : obj.modules.length,
@@ -46,6 +49,13 @@ $(document).ready(function(){
         squareDensity : 5
     })
 
+    //CONNECTION
+    connection = new Connection({
+        host : 'localhost',
+        port : '8002',
+        chart: obj
+    })
+
 
     //OTHERS
     $( "#streamDelay" ).slider({
@@ -55,14 +65,14 @@ $(document).ready(function(){
         value:1,
         slide: function(event, ui){
             $(this).parent().find('p.ammount').text("1 package per " + ui.value + " seconds")
-            streamDelay(ui.value.toString())
+            connection.streamDelay(ui.value.toString())
         }
     });
 
 
 
     /* Connect WebSocket */
-    connect()
+    connection.connect()
     /* Start Rendering */
     timerControl = d3.timer(function(){obj.draw_update()})
 

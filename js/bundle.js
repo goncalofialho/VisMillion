@@ -1,13 +1,13 @@
 (function(l, i, v, e) { v = l.createElement(i); v.async = 1; v.src = '//' + (location.host || 'localhost').split(':')[0] + ':35729/livereload.js?snipver=1'; e = l.getElementsByTagName(i)[0]; e.parentNode.insertBefore(v, e)})(document, 'script');
 class Chart{
     constructor(options){
-
         this.width = options.width || 800;
         this.height = options.height || 400;
         this.margin = options.margin || {top: 10, right: 10, left: 10, bottom: 10};
         this.modules = [];
         this.transitions = options.transitions || 100;
         this.pixelsPerSecond = options.pixelsPerSecond || 10;
+        this.data  = [];
 
         this.canvas = d3.select(".bigvis").append("canvas")
                 .attr('id','canvas')
@@ -223,13 +223,20 @@ class Chart{
 
         if(chart.modules[from-1] == undefined){
             //Transfer Data
-            //console.log("Cannot trasnfer data to nothing")
+            //console.log("Cannot transfer data to nothing")
             return
         }else{
             for (let i = 0; i < data.length; i++){
                 chart.modules[from-1].data.push(data[i]);
             }
         }
+    }
+
+    filterData(startTime, endTime){
+        if(startTime == null)
+            return this.data.filter( el => el.ts < endTime.getTime() )
+        else
+            return this.data.filter( el => el.ts > startTime.getTime() && el.ts < endTime.getTime() )
     }
 }
 
@@ -238,6 +245,8 @@ class Module{
     constructor(options){
         if(this.constructor === Module){
             throw new Error('Cannot instantiate abstract class named: ' + this.constructor.name)
+        }else if(options.chart == undefined){
+            throw new Error('Chart not specified at options')
         }
         this.chart = options.chart;
         this.index = options.index;
@@ -406,14 +415,7 @@ class Linechart extends Module{
         var endTime = new Date(ts - ((this.own_width / this.chart.pixelsPerSecond * 1000) * ((this.chart.modules.length - 1) - this.index) ));
         var startTime = new Date(endTime.getTime() - this.own_width / this.chart.pixelsPerSecond * 1000);
 
-        /* REMOVING DATA ELEMENTS THAT ARE NO LONGER NEEDED */
-        for(var i = 0; i < this.data.length; i++){
-            if(this.data[i].ts > startTime.getTime())
-                break
-        }
-        if(this.index != 0){
-            this.chart.transferData(this.index, this.data.splice(0,i),this.chart);
-        }
+        this.data = this.chart.filterData(startTime, endTime);
 
         for(var i = 0; i < this.boxPlots.length; i++){
             if(this.boxPlots[i].ts > startTime.getTime())
@@ -637,14 +639,7 @@ class Scatterchart extends Module{
         var endTime = new Date(ts - ((this.own_width / this.chart.pixelsPerSecond * 1000) * ((this.chart.modules.length - 1) - this.index) ));
         var startTime = new Date(endTime.getTime() - this.own_width / this.chart.pixelsPerSecond * 1000);
 
-        /* REMOVING DATA ELEMENTS THAT ARE NO LONGER NEEDED */
-        for(var i = 0; i < this.data.length; i++){
-            if(this.data[i].ts > startTime.getTime())
-                break
-        }
-        if(this.index != 0){
-            this.chart.transferData(this.index, this.data.splice(0,i),this.chart);
-        }
+        this.data = this.chart.filterData(startTime, endTime);
 
         // UPDATE DOMAINS
         this.x = d3.scaleTime().range([0, this.own_width]);
@@ -823,14 +818,7 @@ class Barchart extends Module{
         var endTime = new Date(ts - ((this.own_width / this.chart.pixelsPerSecond * 1000) * ((this.chart.modules.length - 1) - this.index) ));
         var startTime = new Date(endTime.getTime() - this.own_width / this.chart.pixelsPerSecond * 1000);
 
-        /* REMOVING DATA ELEMENTS THAT ARE NO LONGER NEEDED */
-        for(var i = 0; i < this.data.length; i++){
-            if(this.data[i].ts > startTime.getTime())
-                break
-        }
-        if(this.index != 0){
-            this.chart.transferData(this.index, this.data.splice(0,i),this.chart);
-        }
+        this.data = this.chart.filterData(null, endTime);
 
         var max = Math.max.apply(Math, this.domain);
         var slices = max/this.numBars;
@@ -918,8 +906,60 @@ class Barchart extends Module{
     }
 }
 
+class Connection{
+    constructor(options){
+        if(options.host == undefined){
+            throw new Error('Must provide host address')
+        }else if(options.port == undefined){
+            throw new Error('Must provide port address')
+        }else if(options.chart == undefined && !(options.chart instanceof Chart)){
+            throw new Error('Please provide a chart')
+        }
+        this.socket;
+        this.host = options.host;
+        this.port = options.port;
+        this.chart = options.chart;
+        this.packs = 0;
+    }
+
+    connect(){
+        var chart = this.chart;
+        var packs = this.packs;
+        this.socket = io.connect('http://' + this.host + ':' + this.port);
+
+        this.socket.on('message', function(data){
+            let now = new Date();
+            chart.data.push({
+                ts: now.getTime(),
+                data: data
+            });
+            packs += 1;
+            $('#package-count p i').text(packs);
+        });
+
+        this.socket.on('delay', function(data){
+            $('.options > span:first-child p.ammount').text("1 package per " + data["value"] + " seconds");
+            $('#streamDelay').slider('value',data["value"]);
+            $('#delay span').text(data["value"]);
+        });
+    }
+
+    streamDelay(value){
+        this.socket.emit('delay', {delay: value});
+    }
+
+    pause(){
+        this.socket.emit('pause');
+    }
+
+    resume(){
+        this.socket.emit('resume');
+    }
+}
+
 var timerControl;
 var obj;
+var connection;
 $(document).ready(function(){
 
     // CHART
@@ -931,9 +971,10 @@ $(document).ready(function(){
         pixelsPerSecond: 10,
         bgColor: '#fff',
         xDomain: [0,100],
-        yDomain: [0,2000]
+        yDomain: [0,2000],
     });
 
+    // MODULES
     var module1 = new Barchart({
         chart : obj,
         index : obj.modules.length,
@@ -960,6 +1001,13 @@ $(document).ready(function(){
         squareDensity : 5
     });
 
+    //CONNECTION
+    connection = new Connection({
+        host : 'localhost',
+        port : '8002',
+        chart: obj
+    });
+
 
     //OTHERS
     $( "#streamDelay" ).slider({
@@ -969,14 +1017,14 @@ $(document).ready(function(){
         value:1,
         slide: function(event, ui){
             $(this).parent().find('p.ammount').text("1 package per " + ui.value + " seconds");
-            streamDelay(ui.value.toString());
+            connection.streamDelay(ui.value.toString());
         }
     });
 
 
 
     /* Connect WebSocket */
-    connect();
+    connection.connect();
     /* Start Rendering */
     timerControl = d3.timer(function(){obj.draw_update();});
 

@@ -1,12 +1,12 @@
 export class Chart{
     constructor(options){
-
         this.width = options.width || 800
         this.height = options.height || 400
         this.margin = options.margin || {top: 10, right: 10, left: 10, bottom: 10}
         this.modules = []
         this.transitions = options.transitions || 100
         this.pixelsPerSecond = options.pixelsPerSecond || 10
+        this.data  = []
 
         this.canvas = d3.select(".bigvis").append("canvas")
                 .attr('id','canvas')
@@ -223,12 +223,19 @@ export class Chart{
 
         if(chart.modules[from-1] == undefined){
             //Transfer Data
-            //console.log("Cannot trasnfer data to nothing")
+            //console.log("Cannot transfer data to nothing")
             return
         }else{
             for (let i = 0; i < data.length; i++){
                 chart.modules[from-1].data.push(data[i])
             }
         }
+    }
+
+    filterData(startTime, endTime){
+        if(startTime == null)
+            return this.data.filter( el => el.ts < endTime.getTime() )
+        else
+            return this.data.filter( el => el.ts > startTime.getTime() && el.ts < endTime.getTime() )
     }
 }
