@@ -15,12 +15,18 @@ app.config['SECRET_KEY'] = 'secret!'
 socketio = SocketIO(app)
 THREAD = Thread()
 fake = Faker()
+"""
 csvfile = pd.read_csv('Taxi_Trips_sample.csv', encoding='utf-8')
 column_timestamp = 'Trip Start Timestamp'
 csvfile = csvfile.sort_values(by=column_timestamp)
 column = 'Trip Seconds'
 maximum = len(csvfile.index)
-
+"""
+csvfile = pd.read_csv('datasets/blockchainBTC2017-12-17.csv', encoding='utf-8')
+column_timestamp = 'timestamp'
+#csvfile = csvfile.sort_values(by=column_timestamp)
+column = 'trans_satoshis'
+maximum = len(csvfile.index)
 
 class CountThread(Thread):
     """Stream data on Thread"""
@@ -46,7 +52,7 @@ class CountThread(Thread):
                 print("delta delay: " + str(delta))
 
                 if not str(csvfile.iloc[count][column]) == 'nan':
-                    socketio.send(int(csvfile.iloc[count][column]))
+                    socketio.send(float(csvfile.iloc[count][column]))
                 else:
                     print("NaN found at " + str(count))
                 count += 1

@@ -8,7 +8,7 @@ export class Linechart extends Module{
         var endTime = new Date()
         var startTime = new Date(endTime.getTime() - this.own_width / this.chart.pixelsPerSecond * 1000)
 
-        this.y = d3.scaleLinear().domain(this.chart.y.domain()).range([this.chart.height, 0])
+        this.y = this.chart.yScale.copy() //d3.scaleLinear().domain(this.chart.y.domain()).range([this.chart.height, 0])
         this.x = d3.scaleTime().range([0, this.own_width]).domain([startTime, endTime])
 
         // OPTIONS
@@ -147,29 +147,32 @@ export class Linechart extends Module{
         var endTime = new Date(ts - ((this.own_width / this.chart.pixelsPerSecond * 1000) * ((this.chart.modules.length - 1) - this.index) ))
         var startTime = new Date(endTime.getTime() - this.own_width / this.chart.pixelsPerSecond * 1000)
 
-        this.data = this.chart.filterData(startTime, endTime)
+        // GENERATING AREA CHART
+        var timeInterval = this.x.domain()
+        var steps = this.boxPlotSteps
+        var scale = d3.scaleTime().domain(timeInterval).range([0, steps])
+        var delta = scale.invert(1).getTime() - scale.invert(0).getTime()
+        var graphsInFront = 3
+        this.data = this.chart.filterData(startTime, new Date(endTime.getTime() + (delta * 3)))
 
-        for(var i = 0; i < this.boxPlots.length; i++){
-            if(this.boxPlots[i].ts > startTime.getTime())
-                break
-        }
-        this.boxPlots.splice(0,i)
+
 
         // UPDATE DOMAINS
         this.x = d3.scaleTime().range([0, this.own_width])
         this.x.domain([startTime, endTime])
         this.y.domain(this.chart.y.domain())
 
-        // GENERATING AREA CHART
-        var timeInterval = this.x.domain()
-        var steps = this.boxPlotSteps
-        var scale = d3.scaleTime().domain(timeInterval).range([0, steps])
-        var delta = scale.invert(1).getTime() - scale.invert(0).getTime()
+
+        for(var i = 0; i < this.boxPlots.length; i++){
+            if(this.boxPlots[i].ts > startTime.getTime() - delta * 2)
+                break
+        }
+        this.boxPlots.splice(0,i)
 
         /* inserting new data */
         if(this.data.length > 0 && this.boxPlots.length == 0){
             var first_element = this.data[0]
-            if((first_element.ts + delta) < timeInterval[1].getTime()){
+            if((first_element.ts + delta) < timeInterval[1].getTime() + (delta * graphsInFront )){
                 var elements = this.data.filter( el => first_element.ts  <= el.ts && (first_element.ts + delta) > el.ts )
                 elements = elements.map( el => el.data ).sort(function(a,b){return a-b})
                 this.boxPlots.push({
@@ -183,7 +186,7 @@ export class Linechart extends Module{
             var first_ts = this.boxPlots[0].ts
             var i = this.boxPlots.length
             var timestamp = first_ts + (delta * i)
-            if((timestamp + delta) < timeInterval[1].getTime()){
+            if((timestamp + delta) < timeInterval[1].getTime() + (delta * graphsInFront )){
                 var elements = this.data.filter( el => timestamp  <= el.ts && (timestamp + delta) > el.ts )
                 elements = elements.map( el => el.data ).sort(function(a,b){return a-b})
                 this.boxPlots.push({
@@ -214,21 +217,51 @@ export class Linechart extends Module{
             context.closePath()
         }else{
             var areaInferior = d3.area()
-                    .x(function(d){ return parent.x1 + parent.chart.margin.left + parent.x(d.ts) })
+            .x(function(d){
+                    if(parent.x(d.ts) < 0){
+                        return parent.x1 + parent.chart.margin.left
+                    }else if(parent.x(d.ts) > parent.own_width){
+                        return parent.x1 + parent.chart.margin.left + parent.own_width
+                    }else{
+                        return parent.x1 + parent.chart.margin.left + parent.x(d.ts)
+                    }
+             //return parent.x(d.ts) > 0 ? (parent.x1 + parent.chart.margin.left + parent.x(d.ts)) : (parent.x1 + parent.chart.margin.left) })
+             })
+            //        .x(function(d){ return parent.x1 + parent.chart.margin.left + parent.x(d.ts) })
                     .y1(function(d){ return parent.chart.margin.top + parent.y(d['0.25'])})
                     .y0(function(d){ return parent.chart.margin.top + parent.y(d['0.5'])})
                     .curve(d3.curveBasis)
                     .context(context)
 
             var areaSuperior = d3.area()
-                    .x(function(d){ return parent.x1 + parent.chart.margin.left + parent.x(d.ts) })
+            .x(function(d){
+                    if(parent.x(d.ts) < 0){
+                        return parent.x1 + parent.chart.margin.left
+                    }else if(parent.x(d.ts) > parent.own_width){
+                        return parent.x1 + parent.chart.margin.left + parent.own_width
+                    }else{
+                        return parent.x1 + parent.chart.margin.left + parent.x(d.ts)
+                    }
+            //return parent.x(d.ts) > 0 ? (parent.x1 + parent.chart.margin.left + parent.x(d.ts)) : (parent.x1 + parent.chart.margin.left) })
+            })
+            //        .x(function(d){ return parent.x1 + parent.chart.margin.left + parent.x(d.ts) })
                     .y1(function(d){ return parent.chart.margin.top + parent.y(d['0.75'])})
                     .y0(function(d){ return parent.chart.margin.top + parent.y(d['0.5'])})
                     .curve(d3.curveBasis)
                     .context(context)
 
             var mediana = d3.line() //d3.area()
-                    .x(function(d){ return parent.x1 + parent.chart.margin.left + parent.x(d.ts) })
+            .x(function(d){
+                    if(parent.x(d.ts) < 0){
+                        return parent.x1 + parent.chart.margin.left
+                    }else if(parent.x(d.ts) > parent.own_width){
+                        return parent.x1 + parent.chart.margin.left + parent.own_width
+                    }else{
+                        return parent.x1 + parent.chart.margin.left + parent.x(d.ts)
+                    }
+            //return parent.x(d.ts) > 0 ? (parent.x1 + parent.chart.margin.left + parent.x(d.ts)) : (parent.x1 + parent.chart.margin.left) })
+            })
+            //        .x(function(d){ return parent.x1 + parent.chart.margin.left + parent.x(d.ts) })
                     .y(function(d){ return parent.chart.margin.top + parent.y(d['0.5'])})
                     .curve(d3.curveBasis)
                     .context(context)

@@ -7,14 +7,16 @@ export class Chart{
         this.transitions = options.transitions || 100
         this.pixelsPerSecond = options.pixelsPerSecond || 10
         this.data  = []
-
+        this.yScale = options.yScale || d3.scaleLinear()
+        this.timerControl
+        this.connection
         this.canvas = d3.select(".bigvis").append("canvas")
                 .attr('id','canvas')
                 .attr("width", this.width + this.margin.left + this.margin.right)
                 .attr("height", this.height + this.margin.top + this.margin.bottom)
 
-        this.x = d3.scaleLinear().range([0, this.width])
-        this.y = d3.scaleLinear().range([this.height, 0])
+        this.x = d3.scaleTime().range([0, this.width])
+        this.y = this.yScale.range([this.height, 0])
 
         this.bgColor = options.bgColor || '#fff'
         this.context = this.canvas.node().getContext("2d")
@@ -74,13 +76,13 @@ export class Chart{
 
         $('#yDomain').slider({
             range: "max",
-            min: 0,
-            max: 10000,
+            min: chart.y.domain()[0],
+            max: chart.y.domain()[1] * 2,
             value: chart.y.domain()[1],
-            step: 500,
+            step: chart.y.domain()[1] * 0.1,
             slide: function(event, ui){
                 $(this).parent().find('#yDomainSpan').text('Y Domain: ' + ui.value)
-                chart.y.domain([0, ui.value])
+                chart.y.domain([chart.y.domain()[0], ui.value])
             }
         })
 
@@ -122,11 +124,12 @@ export class Chart{
         this.clean_board()
 
         // VAR AXIS
-        var tickCount = 10,
+        var tickCount = 5,
             tickSize = 6,
             ticks = this.x.ticks(tickCount),
             ticksY = this.y.ticks(tickCount),
-            tickYFormat = d3.format('.0s'),
+            //tickYFormat = d3.format('.0s'),
+            tickYFormat = d3.format('1'),
             tickFormat = this.x.tickFormat(),
             context = this.context,
             x = this.x,
@@ -167,7 +170,7 @@ export class Chart{
         context.textAlign = "center"
         context.Baseline = "top"
 
-        var translate = this.modules[0].type == "barchart" ? this.width / this.modules.length : 0
+        var translate = (this.modules[0].type == "barchart" ? this.width / this.modules.length : 0) + 30
         ticks.forEach(function(d){
             context.fillText(tickFormat(d), x(d) + translate , height + margin.top  + 10)
         })
@@ -237,5 +240,18 @@ export class Chart{
             return this.data.filter( el => el.ts < endTime.getTime() )
         else
             return this.data.filter( el => el.ts > startTime.getTime() && el.ts < endTime.getTime() )
+    }
+
+    start(){
+        var chart = this
+        this.timerControl = d3.timer(function(){ chart.draw_update() })
+    }
+
+    pause(){
+        this.timerControl.stop()
+    }
+
+    resume(){
+        this.start()
     }
 }

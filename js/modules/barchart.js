@@ -15,20 +15,23 @@ export class Barchart extends Module{
         this.maxWidth = options.maxWidth || 0.9
         this.startingDomain = options.startingDomain || [0,100]
 
-        this.y = d3.scaleLinear().domain(0,this.numBars).range([this.chart.height])
+        this.y = this.chart.y.copy().range([0, this.numBars])
         this.x = d3.scaleLinear().domain(this.startingDomain).range([0, this.own_width])
 
-        this.yScatter = d3.scaleLinear().domain(this.chart.y.domain()).range([this.chart.height, 0])
+        this.yScatter = this.chart.y.copy() // d3.scaleLinear().domain(this.chart.y.domain()).range([this.chart.height, 0])
         this.xScatter = d3.scaleTime().range([0, this.own_width])
         this.xScatter.domain([startTime, endTime])
 
-        this.barsData = new Array(this.numBars).fill(0)
+        this.barsData = []
+        for(let x = 0; x < this.numBars; x++){ this.barsData.push(0)}
 
         this.bandwidth = this.chart.height / this.numBars
 
         this.chart.x = d3.scaleLinear().range([0, this.chart.width - this.own_width])
 
         this.appendModuleOptions()
+
+        this.transitions = []
     }
 
 
@@ -95,26 +98,10 @@ export class Barchart extends Module{
         var slices = max/this.numBars
         var parent = this
 
-        this.barsData = new Array(this.numBars).fill(0)
-        this.data.forEach(function(el,index){
-        // SOMETHING WRONG GOING ON HERE
-            if(el.data >= parent.y.domain()[0] && el.data <= parent.y.domain()[1]){
-                if(parent.chart.modules.length > parent.index + 1 == false || parent.chart.modules[parent.index+1].type == 'scatterchart'){
-                    if(! (parent.xScatter(el.ts) > parent.x(parent.barsData[(Math.ceil(el.data/slices) - 1)]))){
-                        if((Math.ceil(el.data/slices) - 1) == -1)
-                            parent.barsData[0] += 1
-                        else
-                        parent.barsData[(Math.ceil(el.data/slices) - 1)] += 1
-
-                    }
-                }else{
-                    if((Math.ceil(el.data/slices) - 1) < 0)
-                        parent.barsData[0] += 1
-                    else
-                        parent.barsData[(Math.ceil(el.data/slices) - 1)] += 1
-                }
-            }
-        })
+        // TODO: OPTIMIZAR!!
+        for(let i = 0; i < this.barsData.length; i++){
+            this.barsData[i] = this.data.filter( el => Math.round(this.y(el.data)) == i ).length
+        }
 
         // UPDATE DOMAINS
         if( Math.max( ...this.barsData ) > this.x.domain()[1] * this.maxWidth ){

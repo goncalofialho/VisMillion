@@ -8,14 +8,16 @@ class Chart{
         this.transitions = options.transitions || 100;
         this.pixelsPerSecond = options.pixelsPerSecond || 10;
         this.data  = [];
-
+        this.yScale = options.yScale || d3.scaleLinear();
+        this.timerControl;
+        this.connection;
         this.canvas = d3.select(".bigvis").append("canvas")
                 .attr('id','canvas')
                 .attr("width", this.width + this.margin.left + this.margin.right)
                 .attr("height", this.height + this.margin.top + this.margin.bottom);
 
-        this.x = d3.scaleLinear().range([0, this.width]);
-        this.y = d3.scaleLinear().range([this.height, 0]);
+        this.x = d3.scaleTime().range([0, this.width]);
+        this.y = this.yScale.range([this.height, 0]);
 
         this.bgColor = options.bgColor || '#fff';
         this.context = this.canvas.node().getContext("2d");
@@ -75,13 +77,13 @@ class Chart{
 
         $('#yDomain').slider({
             range: "max",
-            min: 0,
-            max: 10000,
+            min: chart.y.domain()[0],
+            max: chart.y.domain()[1] * 2,
             value: chart.y.domain()[1],
-            step: 500,
+            step: chart.y.domain()[1] * 0.1,
             slide: function(event, ui){
                 $(this).parent().find('#yDomainSpan').text('Y Domain: ' + ui.value);
-                chart.y.domain([0, ui.value]);
+                chart.y.domain([chart.y.domain()[0], ui.value]);
             }
         });
 
@@ -123,10 +125,11 @@ class Chart{
         this.clean_board();
 
         // VAR AXIS
-        var tickCount = 10,
+        var tickCount = 5,
             ticks = this.x.ticks(tickCount),
             ticksY = this.y.ticks(tickCount),
-            tickYFormat = d3.format('.0s'),
+            //tickYFormat = d3.format('.0s'),
+            tickYFormat = d3.format('1'),
             tickFormat = this.x.tickFormat(),
             context = this.context,
             x = this.x,
@@ -167,7 +170,7 @@ class Chart{
         context.textAlign = "center";
         context.Baseline = "top";
 
-        var translate = this.modules[0].type == "barchart" ? this.width / this.modules.length : 0;
+        var translate = (this.modules[0].type == "barchart" ? this.width / this.modules.length : 0) + 30;
         ticks.forEach(function(d){
             context.fillText(tickFormat(d), x(d) + translate , height + margin.top  + 10);
         });
@@ -238,6 +241,19 @@ class Chart{
         else
             return this.data.filter( el => el.ts > startTime.getTime() && el.ts < endTime.getTime() )
     }
+
+    start(){
+        var chart = this;
+        this.timerControl = d3.timer(function(){ chart.draw_update(); });
+    }
+
+    pause(){
+        this.timerControl.stop();
+    }
+
+    resume(){
+        this.start();
+    }
 }
 
 // This class should be abstract
@@ -276,7 +292,7 @@ class Linechart extends Module{
         var endTime = new Date();
         var startTime = new Date(endTime.getTime() - this.own_width / this.chart.pixelsPerSecond * 1000);
 
-        this.y = d3.scaleLinear().domain(this.chart.y.domain()).range([this.chart.height, 0]);
+        this.y = this.chart.yScale.copy(); //d3.scaleLinear().domain(this.chart.y.domain()).range([this.chart.height, 0])
         this.x = d3.scaleTime().range([0, this.own_width]).domain([startTime, endTime]);
 
         // OPTIONS
@@ -415,29 +431,32 @@ class Linechart extends Module{
         var endTime = new Date(ts - ((this.own_width / this.chart.pixelsPerSecond * 1000) * ((this.chart.modules.length - 1) - this.index) ));
         var startTime = new Date(endTime.getTime() - this.own_width / this.chart.pixelsPerSecond * 1000);
 
-        this.data = this.chart.filterData(startTime, endTime);
+        // GENERATING AREA CHART
+        var timeInterval = this.x.domain();
+        var steps = this.boxPlotSteps;
+        var scale = d3.scaleTime().domain(timeInterval).range([0, steps]);
+        var delta = scale.invert(1).getTime() - scale.invert(0).getTime();
+        var graphsInFront = 3;
+        this.data = this.chart.filterData(startTime, new Date(endTime.getTime() + (delta * 3)));
 
-        for(var i = 0; i < this.boxPlots.length; i++){
-            if(this.boxPlots[i].ts > startTime.getTime())
-                break
-        }
-        this.boxPlots.splice(0,i);
+
 
         // UPDATE DOMAINS
         this.x = d3.scaleTime().range([0, this.own_width]);
         this.x.domain([startTime, endTime]);
         this.y.domain(this.chart.y.domain());
 
-        // GENERATING AREA CHART
-        var timeInterval = this.x.domain();
-        var steps = this.boxPlotSteps;
-        var scale = d3.scaleTime().domain(timeInterval).range([0, steps]);
-        var delta = scale.invert(1).getTime() - scale.invert(0).getTime();
+
+        for(var i = 0; i < this.boxPlots.length; i++){
+            if(this.boxPlots[i].ts > startTime.getTime() - delta * 2)
+                break
+        }
+        this.boxPlots.splice(0,i);
 
         /* inserting new data */
         if(this.data.length > 0 && this.boxPlots.length == 0){
             var first_element = this.data[0];
-            if((first_element.ts + delta) < timeInterval[1].getTime()){
+            if((first_element.ts + delta) < timeInterval[1].getTime() + (delta * graphsInFront )){
                 var elements = this.data.filter( el => first_element.ts  <= el.ts && (first_element.ts + delta) > el.ts );
                 elements = elements.map( el => el.data ).sort(function(a,b){return a-b});
                 this.boxPlots.push({
@@ -451,7 +470,7 @@ class Linechart extends Module{
             var first_ts = this.boxPlots[0].ts;
             var i = this.boxPlots.length;
             var timestamp = first_ts + (delta * i);
-            if((timestamp + delta) < timeInterval[1].getTime()){
+            if((timestamp + delta) < timeInterval[1].getTime() + (delta * graphsInFront )){
                 var elements = this.data.filter( el => timestamp  <= el.ts && (timestamp + delta) > el.ts );
                 elements = elements.map( el => el.data ).sort(function(a,b){return a-b});
                 this.boxPlots.push({
@@ -482,21 +501,51 @@ class Linechart extends Module{
             context.closePath();
         }else{
             var areaInferior = d3.area()
-                    .x(function(d){ return parent.x1 + parent.chart.margin.left + parent.x(d.ts) })
+            .x(function(d){
+                    if(parent.x(d.ts) < 0){
+                        return parent.x1 + parent.chart.margin.left
+                    }else if(parent.x(d.ts) > parent.own_width){
+                        return parent.x1 + parent.chart.margin.left + parent.own_width
+                    }else{
+                        return parent.x1 + parent.chart.margin.left + parent.x(d.ts)
+                    }
+             //return parent.x(d.ts) > 0 ? (parent.x1 + parent.chart.margin.left + parent.x(d.ts)) : (parent.x1 + parent.chart.margin.left) })
+             })
+            //        .x(function(d){ return parent.x1 + parent.chart.margin.left + parent.x(d.ts) })
                     .y1(function(d){ return parent.chart.margin.top + parent.y(d['0.25'])})
                     .y0(function(d){ return parent.chart.margin.top + parent.y(d['0.5'])})
                     .curve(d3.curveBasis)
                     .context(context);
 
             var areaSuperior = d3.area()
-                    .x(function(d){ return parent.x1 + parent.chart.margin.left + parent.x(d.ts) })
+            .x(function(d){
+                    if(parent.x(d.ts) < 0){
+                        return parent.x1 + parent.chart.margin.left
+                    }else if(parent.x(d.ts) > parent.own_width){
+                        return parent.x1 + parent.chart.margin.left + parent.own_width
+                    }else{
+                        return parent.x1 + parent.chart.margin.left + parent.x(d.ts)
+                    }
+            //return parent.x(d.ts) > 0 ? (parent.x1 + parent.chart.margin.left + parent.x(d.ts)) : (parent.x1 + parent.chart.margin.left) })
+            })
+            //        .x(function(d){ return parent.x1 + parent.chart.margin.left + parent.x(d.ts) })
                     .y1(function(d){ return parent.chart.margin.top + parent.y(d['0.75'])})
                     .y0(function(d){ return parent.chart.margin.top + parent.y(d['0.5'])})
                     .curve(d3.curveBasis)
                     .context(context);
 
             var mediana = d3.line() //d3.area()
-                    .x(function(d){ return parent.x1 + parent.chart.margin.left + parent.x(d.ts) })
+            .x(function(d){
+                    if(parent.x(d.ts) < 0){
+                        return parent.x1 + parent.chart.margin.left
+                    }else if(parent.x(d.ts) > parent.own_width){
+                        return parent.x1 + parent.chart.margin.left + parent.own_width
+                    }else{
+                        return parent.x1 + parent.chart.margin.left + parent.x(d.ts)
+                    }
+            //return parent.x(d.ts) > 0 ? (parent.x1 + parent.chart.margin.left + parent.x(d.ts)) : (parent.x1 + parent.chart.margin.left) })
+            })
+            //        .x(function(d){ return parent.x1 + parent.chart.margin.left + parent.x(d.ts) })
                     .y(function(d){ return parent.chart.margin.top + parent.y(d['0.5'])})
                     .curve(d3.curveBasis)
                     .context(context);
@@ -532,12 +581,14 @@ class Scatterchart extends Module{
         var endTime = new Date();
         var startTime = new Date(endTime.getTime() - this.own_width / this.chart.pixelsPerSecond * 1000);
 
-        this.y = d3.scaleLinear().domain(this.chart.y.domain()).range([this.chart.height, 0]);
+        this.y = this.chart.yScale.copy();
         this.x = d3.scaleTime().range([0, this.own_width]);
         this.x.domain([startTime, endTime]);
 
         this.dotsColor = options.dotsColor || 'orange';
         this.dotsRadius = options.dotsRadius || 5;
+        this.maxFlowDrawDots = options.maxFlowDrawDots || 999;
+        this.lowFlow = true;
 
         this.squareLength = options.squareLength || 15;
         this.scatterBoxes = [];
@@ -546,6 +597,7 @@ class Scatterchart extends Module{
         this.scaleColor = d3.scaleLinear().domain([0,this.squareDensity]).range(['transparent',this.squareColor]).interpolate(d3.interpolateRgb);
 
         this.appendModuleOptions();
+        this.flow = options.flow || 'both';
     }
 
 
@@ -560,6 +612,21 @@ class Scatterchart extends Module{
         var markup = `
             <div class="mod-option">
                 <h3>${options.title}</h3>
+                <fieldset id="scatterchart${options.index}">
+                    <legend>Select Flow </legend>
+                    <span class="radiobuttons" >
+                        <label for="${options.index}radio-1">Low</label>
+                        <input type="radio" name="${options.index}radio-1" id="${options.index}radio-1">
+                    </span>
+                    <span class="radiobuttons">
+                        <label for="${options.index}radio-2">Both</label>
+                        <input type="radio" name="${options.index}radio-1" id="${options.index}radio-2">
+                    </span>
+                    <span class="radiobuttons">
+                        <label for="${options.index}radio-3">High</label>
+                        <input type="radio" name="${options.index}radio-1" id="${options.index}radio-3">
+                    </span>
+                </fieldset>
                 <fieldset id="High-Flow${options.index}">
                     <legend>Low Flow </legend>
                     <p>
@@ -589,6 +656,10 @@ class Scatterchart extends Module{
 
         $('.modules-options').append(markup);
         var module = this;
+        options.flow == 'low' ? $('#'+options.index+'radio-1').prop('checked', true) : (options.flow == 'both' ? $('#'+options.index+'radio-3').prop('checked', true) : $('#'+options.index+'radio-2').prop('checked', true));
+        $('fieldset#scatterchart'+options.index+' input[type="radio"]').change(function(){
+            $(this).attr('id') == options.index + 'radio-1' ? module.flow = 'low' : ($(this).attr('id') == options.index + 'radio-2' ? module.flow = 'both' : module.flow = 'high' );
+        });
         $('#dotsColor'+options.index).spectrum({
             color: module.dotsColor,
             showAlpha: true,
@@ -637,6 +708,8 @@ class Scatterchart extends Module{
         this.own_width = this.chart.width / this.chart.modules.length;
         this.x1 =  this.own_width * this.index;
         var endTime = new Date(ts - ((this.own_width / this.chart.pixelsPerSecond * 1000) * ((this.chart.modules.length - 1) - this.index) ));
+
+      //  var endTime = new Date(ts - ((this.own_width / this.chart.pixelsPerSecond * 1000) * ((this.chart.modules.length - 1) - this.index) ))
         var startTime = new Date(endTime.getTime() - this.own_width / this.chart.pixelsPerSecond * 1000);
 
         this.data = this.chart.filterData(startTime, endTime);
@@ -674,7 +747,8 @@ class Scatterchart extends Module{
         var endScale = new Date(this.scatterBoxes[this.scatterBoxes.length - 1].ts + delta);
 
         var yCells = Math.ceil(this.chart.height / squareLength);
-        var scaleY = d3.scaleLinear().domain(this.y.domain()).range([yCells,0]);
+        var scaleY = this.chart.y.copy();
+        scaleY.domain(this.y.domain()).range([yCells,0]);
         var scatterBoxes = this.scatterBoxes;
 
         var newElements = this.data.filter( el => el.ts > startScale.getTime() && el.ts <= startScale.getTime() + delta);
@@ -690,6 +764,10 @@ class Scatterchart extends Module{
             if(Math.ceil(scaleY(el.data)) <= yCells && Math.ceil(scaleY(el.data)) >= 0)
                 scatterBoxes[scatterBoxes.length - 1].vals[Math.ceil(scaleY(el.data)) - 1] += 1;
         });
+
+        // Should I draw the Dots ?
+        this.lowFlow = this.chart.connection.flowPerSecond < this.maxFlowDrawDots ? true : false;
+
     }
 
 
@@ -699,32 +777,47 @@ class Scatterchart extends Module{
         var color = this.dotsColor;
         var r = this.dotsRadius;
 
-        // Low Flow (Isto e lento)
-        this.data.forEach(function(el){
-            let cx = parent.chart.margin.left + parent.x1 + parent.x(el.ts);
-            let cy = parent.chart.margin.top + parent.y(el.data);
-            //let color = 'orange'
-            context.beginPath();
-          context.fillStyle = color;
-          context.arc(cx, cy, r, 0, 2 * Math.PI, false);
-          context.fill();
-          context.closePath();
 
-        });
+        // Low Flow (Isto e lento)
+        if(this.flow == 'both' || this.flow == 'low'){
+            this.data.forEach(function(el){
+                let cx = parent.chart.margin.left + parent.x1 + parent.x(el.ts);
+                let cy = parent.chart.margin.top + parent.y(el.data);
+                //let color = 'orange'
+                context.beginPath();
+              context.fillStyle = color;
+              context.arc(cx, cy, r, 0, 2 * Math.PI, false);
+              context.fill();
+              context.closePath();
+
+            });
+        }
+        if(this.flow == 'both' || this.flow == 'high'){
 
         // High Flow
         for(let i = 0; i < this.scatterBoxes.length; i++){
+            let x = parent.x1 + parent.chart.margin.left + parent.x(this.scatterBoxes[i].ts);
+            let width = this.squareLength;
+            let height = this.squareLength;
+
+            if( x + width > parent.x1 + parent.chart.margin.left + parent.own_width ){
+                width = (parent.x1 + parent.chart.margin.left + parent.own_width) - x;
+            }else if( x < parent.x1 + parent.chart.margin.left ){
+                width = width + parent.x(this.scatterBoxes[i].ts);
+                x = parent.x1 + parent.chart.margin.left;
+            }
+
             for(let j = 0; j < this.scatterBoxes[i].vals.length; j++){
-                let x = parent.x1 + parent.chart.margin.left + parent.x(this.scatterBoxes[i].ts);
                 let y = parent.chart.margin.top + (j * this.squareLength);
-                let width = this.squareLength;
                 let color = this.scaleColor(this.scatterBoxes[i].vals[j]);
+
                 context.beginPath();
-                context.rect(x, y, width, width);
+                context.rect(x, y, width, height);
                 context.fillStyle = color;
                 context.fill();
                 context.closePath();
             }
+        }
         }
     }
 }
@@ -744,20 +837,23 @@ class Barchart extends Module{
         this.maxWidth = options.maxWidth || 0.9;
         this.startingDomain = options.startingDomain || [0,100];
 
-        this.y = d3.scaleLinear().domain(0,this.numBars).range([this.chart.height]);
+        this.y = this.chart.y.copy().range([0, this.numBars]);
         this.x = d3.scaleLinear().domain(this.startingDomain).range([0, this.own_width]);
 
-        this.yScatter = d3.scaleLinear().domain(this.chart.y.domain()).range([this.chart.height, 0]);
+        this.yScatter = this.chart.y.copy(); // d3.scaleLinear().domain(this.chart.y.domain()).range([this.chart.height, 0])
         this.xScatter = d3.scaleTime().range([0, this.own_width]);
         this.xScatter.domain([startTime, endTime]);
 
-        this.barsData = new Array(this.numBars).fill(0);
+        this.barsData = [];
+        for(let x = 0; x < this.numBars; x++){ this.barsData.push(0);}
 
         this.bandwidth = this.chart.height / this.numBars;
 
         this.chart.x = d3.scaleLinear().range([0, this.chart.width - this.own_width]);
 
         this.appendModuleOptions();
+
+        this.transitions = [];
     }
 
 
@@ -822,28 +918,11 @@ class Barchart extends Module{
 
         var max = Math.max.apply(Math, this.domain);
         var slices = max/this.numBars;
-        var parent = this;
 
-        this.barsData = new Array(this.numBars).fill(0);
-        this.data.forEach(function(el,index){
-        // SOMETHING WRONG GOING ON HERE
-            if(el.data >= parent.y.domain()[0] && el.data <= parent.y.domain()[1]){
-                if(parent.chart.modules.length > parent.index + 1 == false || parent.chart.modules[parent.index+1].type == 'scatterchart'){
-                    if(! (parent.xScatter(el.ts) > parent.x(parent.barsData[(Math.ceil(el.data/slices) - 1)]))){
-                        if((Math.ceil(el.data/slices) - 1) == -1)
-                            parent.barsData[0] += 1;
-                        else
-                        parent.barsData[(Math.ceil(el.data/slices) - 1)] += 1;
-
-                    }
-                }else{
-                    if((Math.ceil(el.data/slices) - 1) < 0)
-                        parent.barsData[0] += 1;
-                    else
-                        parent.barsData[(Math.ceil(el.data/slices) - 1)] += 1;
-                }
-            }
-        });
+        // TODO: OPTIMIZAR!!
+        for(let i = 0; i < this.barsData.length; i++){
+            this.barsData[i] = this.data.filter( el => Math.round(this.y(el.data)) == i ).length;
+        }
 
         // UPDATE DOMAINS
         if( Math.max( ...this.barsData ) > this.x.domain()[1] * this.maxWidth ){
@@ -920,6 +999,33 @@ class Connection{
         this.port = options.port;
         this.chart = options.chart;
         this.packs = 0;
+        this.flowPerSecond = 1;
+        this.chart.connection = this;
+
+        this.divOptions(this.chart);
+    }
+
+    divOptions(){
+        var markup = `
+            <p>
+                <button type="button" status="resume" class="btn btn-primary" disabled><i class="fas fa-play"></i>Resume</button>
+                <button type="button" status="pause" class="btn btn-warning"><i class="fas fa-pause"></i>Pause</button>
+            </p>
+        `;
+        $('#chartOptions').append(markup);
+
+        var parent = this;
+        $('#chartOptions button').on('click', function(){
+            $(this).parent().find('button').attr('disabled', false);
+            $(this).attr('disabled', true);
+            if($(this).attr('status') == 'resume'){
+                parent.resume();
+                parent.chart.resume();
+            }else{
+                parent.pause();
+                parent.chart.pause();
+            }
+        });
     }
 
     connect(){
@@ -936,11 +1042,12 @@ class Connection{
             packs += 1;
             $('#package-count p i').text(packs);
         });
-
+        var connection = this;
         this.socket.on('delay', function(data){
             $('.options > span:first-child p.ammount').text("1 package per " + data["value"] + " seconds");
             $('#streamDelay').slider('value',data["value"]);
             $('#delay span').text(data["value"]);
+            connection.flowPerSecond = 1 / data['value'];
         });
     }
 
@@ -957,28 +1064,29 @@ class Connection{
     }
 }
 
-var timerControl;
 var obj;
 var connection;
 $(document).ready(function(){
 
     // CHART
     obj = new Chart({
-        width: $('.container').width(),
+        width: $('.container').width() ,
         height: 400,
-        margin: {top: 50, right: 30, left: 30, bottom: 20},
+        margin: {top: 50, right: 40, left: 40, bottom: 20},
         transitions: 300,
         pixelsPerSecond: 10,
         bgColor: '#fff',
         xDomain: [0,100],
-        yDomain: [0,2000],
+        yDomain: [1e-5,100],
+        yScale: d3.scaleLog()
     });
 
     // MODULES
+
     var module1 = new Barchart({
         chart : obj,
         index : obj.modules.length,
-        numBars : 10,
+        numBars : 20,
         barsColor : 'orange',
         maxWidth : 0.95,
         startingDomain : [0,100]
@@ -988,17 +1096,18 @@ $(document).ready(function(){
         chart : obj,
         index : obj.modules.length,
         flow  : 'high',
-        boxPlotSteps : 20
+        boxPlotSteps : 40
     });
 
     var module2 = new Scatterchart({
         chart : obj,
         index : obj.modules.length,
         dotsColor  : 'black',
-        dotsRadius : 3,
-        squareLength : 10,
+        dotsRadius : 1,
+        squareLength : 20,
         squareColor : 'orange',
-        squareDensity : 5
+        squareDensity : 30,
+        maxFlowDrawDots : 900
     });
 
     //CONNECTION
@@ -1013,7 +1122,7 @@ $(document).ready(function(){
     $( "#streamDelay" ).slider({
         min:0.001,
         max:2,
-        step:0.01,
+        step:0.001,
         value:1,
         slide: function(event, ui){
             $(this).parent().find('p.ammount').text("1 package per " + ui.value + " seconds");
@@ -1026,6 +1135,5 @@ $(document).ready(function(){
     /* Connect WebSocket */
     connection.connect();
     /* Start Rendering */
-    timerControl = d3.timer(function(){obj.draw_update();});
-
+    obj.start();
 });

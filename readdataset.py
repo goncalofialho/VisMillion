@@ -8,5 +8,3 @@ if __name__ == '__main__':
 
     for chunk in df:
         print(chunk.head())
-
-

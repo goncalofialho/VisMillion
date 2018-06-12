@@ -8,12 +8,14 @@ export class Scatterchart extends Module{
         var endTime = new Date()
         var startTime = new Date(endTime.getTime() - this.own_width / this.chart.pixelsPerSecond * 1000)
 
-        this.y = d3.scaleLinear().domain(this.chart.y.domain()).range([this.chart.height, 0])
+        this.y = this.chart.yScale.copy()
         this.x = d3.scaleTime().range([0, this.own_width])
         this.x.domain([startTime, endTime])
 
         this.dotsColor = options.dotsColor || 'orange'
         this.dotsRadius = options.dotsRadius || 5
+        this.maxFlowDrawDots = options.maxFlowDrawDots || 999
+        this.lowFlow = true
 
         this.squareLength = options.squareLength || 15
         this.scatterBoxes = []
@@ -22,6 +24,7 @@ export class Scatterchart extends Module{
         this.scaleColor = d3.scaleLinear().domain([0,this.squareDensity]).range(['transparent',this.squareColor]).interpolate(d3.interpolateRgb)
 
         this.appendModuleOptions()
+        this.flow = options.flow || 'both'
     }
 
 
@@ -36,6 +39,21 @@ export class Scatterchart extends Module{
         var markup = `
             <div class="mod-option">
                 <h3>${options.title}</h3>
+                <fieldset id="scatterchart${options.index}">
+                    <legend>Select Flow </legend>
+                    <span class="radiobuttons" >
+                        <label for="${options.index}radio-1">Low</label>
+                        <input type="radio" name="${options.index}radio-1" id="${options.index}radio-1">
+                    </span>
+                    <span class="radiobuttons">
+                        <label for="${options.index}radio-2">Both</label>
+                        <input type="radio" name="${options.index}radio-1" id="${options.index}radio-2">
+                    </span>
+                    <span class="radiobuttons">
+                        <label for="${options.index}radio-3">High</label>
+                        <input type="radio" name="${options.index}radio-1" id="${options.index}radio-3">
+                    </span>
+                </fieldset>
                 <fieldset id="High-Flow${options.index}">
                     <legend>Low Flow </legend>
                     <p>
@@ -65,6 +83,10 @@ export class Scatterchart extends Module{
 
         $('.modules-options').append(markup)
         var module = this
+        options.flow == 'low' ? $('#'+options.index+'radio-1').prop('checked', true) : (options.flow == 'both' ? $('#'+options.index+'radio-3').prop('checked', true) : $('#'+options.index+'radio-2').prop('checked', true))
+        $('fieldset#scatterchart'+options.index+' input[type="radio"]').change(function(){
+            $(this).attr('id') == options.index + 'radio-1' ? module.flow = 'low' : ($(this).attr('id') == options.index + 'radio-2' ? module.flow = 'both' : module.flow = 'high' )
+        })
         $('#dotsColor'+options.index).spectrum({
             color: module.dotsColor,
             showAlpha: true,
@@ -113,6 +135,8 @@ export class Scatterchart extends Module{
         this.own_width = this.chart.width / this.chart.modules.length
         this.x1 =  this.own_width * this.index
         var endTime = new Date(ts - ((this.own_width / this.chart.pixelsPerSecond * 1000) * ((this.chart.modules.length - 1) - this.index) ))
+
+      //  var endTime = new Date(ts - ((this.own_width / this.chart.pixelsPerSecond * 1000) * ((this.chart.modules.length - 1) - this.index) ))
         var startTime = new Date(endTime.getTime() - this.own_width / this.chart.pixelsPerSecond * 1000)
 
         this.data = this.chart.filterData(startTime, endTime)
@@ -150,7 +174,8 @@ export class Scatterchart extends Module{
         var endScale = new Date(this.scatterBoxes[this.scatterBoxes.length - 1].ts + delta)
 
         var yCells = Math.ceil(this.chart.height / squareLength)
-        var scaleY = d3.scaleLinear().domain(this.y.domain()).range([yCells,0])
+        var scaleY = this.chart.y.copy()
+        scaleY.domain(this.y.domain()).range([yCells,0])
         var scatterBoxes = this.scatterBoxes
 
         var newElements = this.data.filter( el => el.ts > startScale.getTime() && el.ts <= startScale.getTime() + delta)
@@ -166,6 +191,10 @@ export class Scatterchart extends Module{
             if(Math.ceil(scaleY(el.data)) <= yCells && Math.ceil(scaleY(el.data)) >= 0)
                 scatterBoxes[scatterBoxes.length - 1].vals[Math.ceil(scaleY(el.data)) - 1] += 1
         })
+
+        // Should I draw the Dots ?
+        this.lowFlow = this.chart.connection.flowPerSecond < this.maxFlowDrawDots ? true : false
+
     }
 
 
@@ -175,32 +204,47 @@ export class Scatterchart extends Module{
         var color = this.dotsColor;
         var r = this.dotsRadius;
 
-        // Low Flow (Isto e lento)
-        this.data.forEach(function(el){
-            let cx = parent.chart.margin.left + parent.x1 + parent.x(el.ts)
-            let cy = parent.chart.margin.top + parent.y(el.data)
-            //let color = 'orange'
-            context.beginPath()
-          context.fillStyle = color
-          context.arc(cx, cy, r, 0, 2 * Math.PI, false)
-          context.fill()
-          context.closePath()
 
-        })
+        // Low Flow (Isto e lento)
+        if(this.flow == 'both' || this.flow == 'low'){
+            this.data.forEach(function(el){
+                let cx = parent.chart.margin.left + parent.x1 + parent.x(el.ts)
+                let cy = parent.chart.margin.top + parent.y(el.data)
+                //let color = 'orange'
+                context.beginPath()
+              context.fillStyle = color
+              context.arc(cx, cy, r, 0, 2 * Math.PI, false)
+              context.fill()
+              context.closePath()
+
+            })
+        }
+        if(this.flow == 'both' || this.flow == 'high'){
 
         // High Flow
         for(let i = 0; i < this.scatterBoxes.length; i++){
+            let x = parent.x1 + parent.chart.margin.left + parent.x(this.scatterBoxes[i].ts)
+            let width = this.squareLength
+            let height = this.squareLength
+
+            if( x + width > parent.x1 + parent.chart.margin.left + parent.own_width ){
+                width = (parent.x1 + parent.chart.margin.left + parent.own_width) - x
+            }else if( x < parent.x1 + parent.chart.margin.left ){
+                width = width + parent.x(this.scatterBoxes[i].ts)
+                x = parent.x1 + parent.chart.margin.left
+            }
+
             for(let j = 0; j < this.scatterBoxes[i].vals.length; j++){
-                let x = parent.x1 + parent.chart.margin.left + parent.x(this.scatterBoxes[i].ts)
                 let y = parent.chart.margin.top + (j * this.squareLength)
-                let width = this.squareLength
                 let color = this.scaleColor(this.scatterBoxes[i].vals[j])
+
                 context.beginPath()
-                context.rect(x, y, width, width)
+                context.rect(x, y, width, height)
                 context.fillStyle = color
                 context.fill()
                 context.closePath()
             }
+        }
         }
     }
 }

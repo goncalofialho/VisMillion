@@ -15,6 +15,33 @@ export class Connection{
         this.port = options.port
         this.chart = options.chart
         this.packs = 0
+        this.flowPerSecond = 1
+        this.chart.connection = this
+
+        this.divOptions(this.chart)
+    }
+
+    divOptions(){
+        var markup = `
+            <p>
+                <button type="button" status="resume" class="btn btn-primary" disabled><i class="fas fa-play"></i>Resume</button>
+                <button type="button" status="pause" class="btn btn-warning"><i class="fas fa-pause"></i>Pause</button>
+            </p>
+        `
+        $('#chartOptions').append(markup)
+
+        var parent = this
+        $('#chartOptions button').on('click', function(){
+            $(this).parent().find('button').attr('disabled', false)
+            $(this).attr('disabled', true)
+            if($(this).attr('status') == 'resume'){
+                parent.resume()
+                parent.chart.resume()
+            }else{
+                parent.pause()
+                parent.chart.pause()
+            }
+        })
     }
 
     connect(){
@@ -31,11 +58,12 @@ export class Connection{
             packs += 1
             $('#package-count p i').text(packs)
         })
-
+        var connection = this
         this.socket.on('delay', function(data){
             $('.options > span:first-child p.ammount').text("1 package per " + data["value"] + " seconds")
             $('#streamDelay').slider('value',data["value"])
             $('#delay span').text(data["value"])
+            connection.flowPerSecond = 1 / data['value']
         })
     }
 

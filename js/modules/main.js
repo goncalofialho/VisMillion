@@ -12,21 +12,23 @@ $(document).ready(function(){
 
     // CHART
     obj = new Chart({
-        width: $('.container').width(),
+        width: $('.container').width() ,
         height: 400,
-        margin: {top: 50, right: 30, left: 30, bottom: 20},
+        margin: {top: 50, right: 40, left: 40, bottom: 20},
         transitions: 300,
         pixelsPerSecond: 10,
         bgColor: '#fff',
         xDomain: [0,100],
-        yDomain: [0,2000],
+        yDomain: [1e-5,100],
+        yScale: d3.scaleLog()
     })
 
     // MODULES
+
     var module1 = new Barchart({
         chart : obj,
         index : obj.modules.length,
-        numBars : 10,
+        numBars : 20,
         barsColor : 'orange',
         maxWidth : 0.95,
         startingDomain : [0,100]
@@ -36,17 +38,18 @@ $(document).ready(function(){
         chart : obj,
         index : obj.modules.length,
         flow  : 'high',
-        boxPlotSteps : 20
+        boxPlotSteps : 40
     })
 
     var module2 = new Scatterchart({
         chart : obj,
         index : obj.modules.length,
         dotsColor  : 'black',
-        dotsRadius : 3,
-        squareLength : 10,
+        dotsRadius : 1,
+        squareLength : 20,
         squareColor : 'orange',
-        squareDensity : 5
+        squareDensity : 30,
+        maxFlowDrawDots : 900
     })
 
     //CONNECTION
@@ -61,7 +64,7 @@ $(document).ready(function(){
     $( "#streamDelay" ).slider({
         min:0.001,
         max:2,
-        step:0.01,
+        step:0.001,
         value:1,
         slide: function(event, ui){
             $(this).parent().find('p.ammount').text("1 package per " + ui.value + " seconds")
@@ -74,6 +77,5 @@ $(document).ready(function(){
     /* Connect WebSocket */
     connection.connect()
     /* Start Rendering */
-    timerControl = d3.timer(function(){obj.draw_update()})
-
+    obj.start()
 })
