@@ -1,4 +1,32 @@
 (function(l, i, v, e) { v = l.createElement(i); v.async = 1; v.src = '//' + (location.host || 'localhost').split(':')[0] + ':35729/livereload.js?snipver=1'; e = l.getElementsByTagName(i)[0]; e.parentNode.insertBefore(v, e)})(document, 'script');
+class Outlier{
+    constructor(options){
+        this.chart = options.chart;
+        this.height = options.height;
+        this.width = options.width;
+        this.data = [];
+        this.thresholdTop;
+        this.thresholdBottom = options.thresholdBottom;
+
+    }
+    update(ts){
+        //console.log('updating')
+    }
+    draw(){
+        var context = this.chart.context;
+        var x = this.chart.margin.left;
+        var y = this.chart.margin.top - this.height;
+        var width = this.width;
+        var height = this.height;
+        context.beginPath();
+        context.strokeStyle = 'black';
+        context.rect(x, y, width, height);
+        context.stroke();
+        context.closePath();
+        //console.log('drawing')
+    }
+}
+
 class Chart{
     constructor(options){
         this.width = options.width || 800;
@@ -11,8 +39,11 @@ class Chart{
         this.yScale = options.yScale || d3.scaleLinear();
         this.timerControl;
         this.connection;
-        this.outlierBox = options.outlierBox || {width: this.width, height: 100};
-        this.margin.top = this.margin.top + this.outlierBox.height;
+        if(options.outlier){
+            var outlierHeight = 100;
+            this.outlierBox = options.outlierBox || {width: this.width, height: outlierHeight};
+            this.margin.top = this.margin.top + this.outlierBox.height;
+        }
         this.container = options.container || d3.select('.bigvis');
         this.canvas = this.container.append("canvas")
                 .attr('id','canvas')
@@ -37,11 +68,58 @@ class Chart{
         this.time0 = Date.now();
         this.fps = d3.select('#fps span');
 
+        if(options.outlier){
+            let opts = {
+                chart : this,
+                width : this.width,
+                height: outlierHeight,
+                thresholdBottom : this.y.domain()[1]
+            };
+            this.outlier = new Outlier(opts);
+        }
+
         this.divOptions({
             title: 'Chart',
             pixelsPerSecond: this.pixelsPerSecond,
             maxYDomain: this.y.domain()[1]
         });
+
+        this.tooltip = d3.select('body').append('div')
+                            .attr('class', 'tooltip');
+
+        let chart = this;
+        this.canvas.on('mousemove', function(){ chart.mouseEvent(); } );
+    }
+
+    mouseEvent(){
+        var mouseX = d3.event.layerX || d3.event.offsetX;
+        var mouseY = d3.event.layerY || d3.event.offsetY;
+
+        if( mouseX > this.margin.left && mouseX < this.margin.left + this.width
+                    && mouseY > this.margin.top &&  mouseY < this.margin.top + this.height){
+
+            for(var i = this.modules.length - 1; i > -1; i--){
+                if((this.width / this.modules.length) * i < mouseX - this.margin.left)
+                    break
+            }
+
+            this.modules[i].mouseEvent(mouseX, mouseY, this.tooltip, event);
+
+/*
+            var markup = `
+                            <span>X: <i>${mouseX}</i></span>
+                            <span>Y: <i>${mouseY}</i></span>
+                            `
+            this.tooltip.html(markup)
+            this.tooltip
+                .style('top', d3.event.pageY + 5 + 'px')
+                .style('left', d3.event.pageX + 5 + 'px')
+                .classed('open', true)*/
+        }else{
+            this.tooltip
+                .classed('open', false);
+        }
+
     }
 
     divOptions(options){
@@ -129,6 +207,7 @@ class Chart{
         this.modules.forEach(function(el){
             el.update(ts);
         });
+        if(this.outlier) this.outlier.update(ts);
     }
 
     draw(){
@@ -152,6 +231,7 @@ class Chart{
         this.modules.forEach(function(el){
             el.draw();
         });
+        if(this.outlier) this.outlier.draw();
 
         // Y AXIS
         context.beginPath();
@@ -292,6 +372,7 @@ class Module{
     appendModuleOptions(){}
     update(ts){}
     draw(){}
+    mouseEvent(x, y, tooltip, event){}
 }
 
 class Linechart extends Module{
@@ -318,6 +399,21 @@ class Linechart extends Module{
         this.highBottomAreaColor = options.highBottomAreaColor || 'rgba(255, 0, 0, 0.5)';
 
         this.appendModuleOptions();
+    }
+
+
+
+    mouseEvent(x, y, tooltip, event){
+        console.log('over line');
+        var markup = `
+                            <span>X: <i>${x}</i></span>
+                            <span>Y: <i>${y}</i></span>
+                            `;
+        tooltip.html(markup);
+        tooltip
+         /*   .style('top', event.pageY + 5 + 'px')
+            .style('left', event.pageX + 5 + 'px')*/
+            .classed('open', false);
     }
 
 
@@ -645,6 +741,49 @@ class Scatterchart extends Module{
     }
 
 
+    mouseEvent(x, y, tooltip, event){
+        var notFound = true;
+
+        loopBoxes:
+        for(var i = 0; i < this.scatterBoxes.length; i++){
+            let xBox, yBox, width, height;
+            xBox = this.x1 + this.chart.margin.left + this.x(this.scatterBoxes[i].ts);
+            width = this.squareLength;
+            height = this.squareLength;
+
+            if( xBox + width > this.x1 + this.chart.margin.left + this.own_width){
+                width = (this.x1 + this.chart.width.left + this.own_width) - xBox;
+            }else if( xBox < this.x1 + this.chart.margin.left){
+                width = width + this.x(this.scatterBoxes[i].ts);
+                xBox = this.x1 + this.chart.margin.left;
+            }
+
+            for(var j = 0; j < this.scatterBoxes[i].vals.length; j++){
+                yBox = this.chart.margin.top + (j * this.squareLength);
+                if(this.scatterBoxes[i].vals[j] > 0 && insideBox({x:x, y:y},{x:xBox, y:yBox, width: width, height: height})){
+                    var val = this.scatterBoxes[i].vals[j];
+                    var markup = `
+                        <span><i>${val}</i></span>
+                        `;
+                    tooltip.html(markup);
+                    tooltip
+                        .style('top', event.pageY + 5 + 'px')
+                        .style('left', event.pageX + 5 + 'px')
+                        .classed('open', true);
+
+                    notFound = false;
+                    break loopBoxes
+                }
+            }
+        }
+
+        if( notFound ){
+            tooltip
+                .classed('open', false);
+        }
+    }
+
+
     appendModuleOptions(){
         var options = {
             title: this.type,
@@ -906,6 +1045,45 @@ class Barchart extends Module{
     }
 
 
+    mouseEvent(x, y, tooltip, event){
+        var notFound = true;
+        var scale = this.x.copy();
+        scale.range([scale.range()[1], scale.range()[0]]);
+        for(var i = 0; i < this.barsData.length; i++){
+            let xBox,yBox,width,height;
+            xBox = this.chart.margin.left + this.x1 + (this.own_width - scale(this.barsData[i]));
+            yBox = this.chart.margin.top + (this.chart.height - this.bandwidth) - (i * this.bandwidth);
+            width = scale(this.barsData[i]);
+            height = this.bandwidth;
+            //console.log('margin: ' + this.chart.margin.left + '   x1: ' + this.x1 + '   own_width: ' + this.own_width + '   x: '+ this.x(this.barsData[i]) + '  = ' + xBox)
+            //console.log('margin: ' + e + '   x1: ' + a + '   own_width: ' + b + '   x: '+ c + '  = ' + d)
+
+            if(insideBox({x:x, y:y},{x:xBox, y:yBox, width: width, height: height})){
+                var val = Math.floor(this.barsData[i]);
+                var from = (this.y.invert(i) < 0.001) ? this.y.invert(i).toExponential(2) : this.y.invert(i).toFixed(3);
+                var to = (this.y.invert(i+1) < 0.001) ? this.y.invert(i+1).toExponential(2) : this.y.invert(i+1).toFixed(3);
+                var markup = `
+                    <span>[${from} : ${to}[   ->  <i>${val}</i></span>
+                    `;
+                tooltip.html(markup);
+                tooltip
+                    .style('top', event.pageY + 5 + 'px')
+                    .style('left', event.pageX + 5 + 'px')
+                    .classed('open', true);
+
+                notFound = false;
+                break
+            }
+        }
+
+        if( notFound ){
+            tooltip
+                .classed('open', false);
+
+        }
+    }
+
+
     appendModuleOptions(){
         var options = {
             title: this.type,
@@ -1042,6 +1220,11 @@ class Barchart extends Module{
                 y = this.chart.margin.top + (this.chart.height - this.bandwidth) - (i * this.bandwidth);
                 width = this.x(this.barsData[i]);
                 height = this.bandwidth;
+                a = this.x1;
+                b = this.own_width;
+                if(i==0){ c = this.x(this.barsData[i]);}
+                e = this.chart.margin.left;
+                domain = this.x.range();
             }
             color = this.barsColor;
             context.beginPath();
@@ -1054,6 +1237,7 @@ class Barchart extends Module{
         }
     }
 }
+var a,b,c,e,domain;
 
 class Connection{
     constructor(options){
@@ -1149,7 +1333,8 @@ $(document).ready(function(){
         xDomain: [0,100],
         yDomain: [1e-6,100],
         yScale: d3.scaleLog(),
-        container: d3.select('.bigvis')
+        container: d3.select('.bigvis'),
+        outlier: true
     });
 
     // MODULES

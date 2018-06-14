@@ -25,7 +25,20 @@ function barchartDemo(){
   incrementBarChart()
   obj.update()
 }
+function insideBox(point, box){
+    var x = point.x ,
+        y = point.y
 
+    var xBox = box.x,
+        yBox = box.y,
+        width = box.width,
+        height = box.height
+    //console.log('Point: ')
+    //console.log(point)
+    //console.log('Box  : ')
+    //console.log(box)
+    return ( x >= xBox && x < xBox + width && y >= yBox && y < yBox + height)
+}
 
 function groupBarChart(){
   /* TODO : SCALES AND RANGES */

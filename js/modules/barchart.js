@@ -40,6 +40,45 @@ export class Barchart extends Module{
     }
 
 
+    mouseEvent(x, y, tooltip, event){
+        var notFound = true
+        var scale = this.x.copy()
+        scale.range([scale.range()[1], scale.range()[0]])
+        for(var i = 0; i < this.barsData.length; i++){
+            let xBox,yBox,width,height;
+            xBox = this.chart.margin.left + this.x1 + (this.own_width - scale(this.barsData[i]))
+            yBox = this.chart.margin.top + (this.chart.height - this.bandwidth) - (i * this.bandwidth)
+            width = scale(this.barsData[i])
+            height = this.bandwidth
+            //console.log('margin: ' + this.chart.margin.left + '   x1: ' + this.x1 + '   own_width: ' + this.own_width + '   x: '+ this.x(this.barsData[i]) + '  = ' + xBox)
+            //console.log('margin: ' + e + '   x1: ' + a + '   own_width: ' + b + '   x: '+ c + '  = ' + d)
+
+            if(insideBox({x:x, y:y},{x:xBox, y:yBox, width: width, height: height})){
+                var val = Math.floor(this.barsData[i])
+                var from = (this.y.invert(i) < 0.001) ? this.y.invert(i).toExponential(2) : this.y.invert(i).toFixed(3)
+                var to = (this.y.invert(i+1) < 0.001) ? this.y.invert(i+1).toExponential(2) : this.y.invert(i+1).toFixed(3)
+                var markup = `
+                    <span>[${from} : ${to}[   ->  <i>${val}</i></span>
+                    `
+                tooltip.html(markup)
+                tooltip
+                    .style('top', event.pageY + 5 + 'px')
+                    .style('left', event.pageX + 5 + 'px')
+                    .classed('open', true)
+
+                notFound = false
+                break
+            }
+        }
+
+        if( notFound ){
+            tooltip
+                .classed('open', false)
+
+        }
+    }
+
+
     appendModuleOptions(){
         var options = {
             title: this.type,
@@ -176,6 +215,12 @@ export class Barchart extends Module{
                 y = this.chart.margin.top + (this.chart.height - this.bandwidth) - (i * this.bandwidth)
                 width = this.x(this.barsData[i])
                 height = this.bandwidth
+                a = this.x1
+                b = this.own_width
+                if(i==0){ c = this.x(this.barsData[i])}
+                d = x
+                e = this.chart.margin.left
+                domain = this.x.range()
             }
             color = this.barsColor
             context.beginPath()
@@ -188,3 +233,4 @@ export class Barchart extends Module{
         }
     }
 }
+var a,b,c,d,e,domain

@@ -28,6 +28,49 @@ export class Scatterchart extends Module{
     }
 
 
+    mouseEvent(x, y, tooltip, event){
+        var notFound = true
+
+        loopBoxes:
+        for(var i = 0; i < this.scatterBoxes.length; i++){
+            let xBox, yBox, width, height
+            xBox = this.x1 + this.chart.margin.left + this.x(this.scatterBoxes[i].ts)
+            width = this.squareLength
+            height = this.squareLength
+
+            if( xBox + width > this.x1 + this.chart.margin.left + this.own_width){
+                width = (this.x1 + this.chart.width.left + this.own_width) - xBox
+            }else if( xBox < this.x1 + this.chart.margin.left){
+                width = width + this.x(this.scatterBoxes[i].ts)
+                xBox = this.x1 + this.chart.margin.left
+            }
+
+            for(var j = 0; j < this.scatterBoxes[i].vals.length; j++){
+                yBox = this.chart.margin.top + (j * this.squareLength)
+                if(this.scatterBoxes[i].vals[j] > 0 && insideBox({x:x, y:y},{x:xBox, y:yBox, width: width, height: height})){
+                    var val = this.scatterBoxes[i].vals[j]
+                    var markup = `
+                        <span><i>${val}</i></span>
+                        `
+                    tooltip.html(markup)
+                    tooltip
+                        .style('top', event.pageY + 5 + 'px')
+                        .style('left', event.pageX + 5 + 'px')
+                        .classed('open', true)
+
+                    notFound = false
+                    break loopBoxes
+                }
+            }
+        }
+
+        if( notFound ){
+            tooltip
+                .classed('open', false)
+        }
+    }
+
+
     appendModuleOptions(){
         var options = {
             title: this.type,

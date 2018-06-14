@@ -21,7 +21,8 @@ $(document).ready(function(){
         xDomain: [0,100],
         yDomain: [1e-6,100],
         yScale: d3.scaleLog(),
-        container: d3.select('.bigvis')
+        container: d3.select('.bigvis'),
+        outlier: true
     })
 
     // MODULES

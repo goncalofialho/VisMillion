@@ -27,6 +27,21 @@ export class Linechart extends Module{
     }
 
 
+
+    mouseEvent(x, y, tooltip, event){
+        console.log('over line')
+        var markup = `
+                            <span>X: <i>${x}</i></span>
+                            <span>Y: <i>${y}</i></span>
+                            `
+        tooltip.html(markup)
+        tooltip
+         /*   .style('top', event.pageY + 5 + 'px')
+            .style('left', event.pageX + 5 + 'px')*/
+            .classed('open', false)
+    }
+
+
     appendModuleOptions(){
         var options = {
             title: this.type,

@@ -24,4 +24,5 @@ export class Module{
     appendModuleOptions(){}
     update(ts){}
     draw(){}
+    mouseEvent(x, y, tooltip, event){}
 }

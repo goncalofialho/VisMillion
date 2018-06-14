@@ -1,3 +1,6 @@
+import { Outlier } from './outlier.js'
+
+
 export class Chart{
     constructor(options){
         this.width = options.width || 800
@@ -10,8 +13,11 @@ export class Chart{
         this.yScale = options.yScale || d3.scaleLinear()
         this.timerControl
         this.connection
-        this.outlierBox = options.outlierBox || {width: this.width, height: 100}
-        this.margin.top = this.margin.top + this.outlierBox.height
+        if(options.outlier){
+            var outlierHeight = 100
+            this.outlierBox = options.outlierBox || {width: this.width, height: outlierHeight}
+            this.margin.top = this.margin.top + this.outlierBox.height
+        }
         this.container = options.container || d3.select('.bigvis')
         this.canvas = this.container.append("canvas")
                 .attr('id','canvas')
@@ -36,11 +42,58 @@ export class Chart{
         this.time0 = Date.now()
         this.fps = d3.select('#fps span')
 
+        if(options.outlier){
+            let opts = {
+                chart : this,
+                width : this.width,
+                height: outlierHeight,
+                thresholdBottom : this.y.domain()[1]
+            }
+            this.outlier = new Outlier(opts)
+        }
+
         this.divOptions({
             title: 'Chart',
             pixelsPerSecond: this.pixelsPerSecond,
             maxYDomain: this.y.domain()[1]
         })
+
+        this.tooltip = d3.select('body').append('div')
+                            .attr('class', 'tooltip')
+
+        let chart = this
+        this.canvas.on('mousemove', function(){ chart.mouseEvent() } )
+    }
+
+    mouseEvent(){
+        var mouseX = d3.event.layerX || d3.event.offsetX
+        var mouseY = d3.event.layerY || d3.event.offsetY
+
+        if( mouseX > this.margin.left && mouseX < this.margin.left + this.width
+                    && mouseY > this.margin.top &&  mouseY < this.margin.top + this.height){
+
+            for(var i = this.modules.length - 1; i > -1; i--){
+                if((this.width / this.modules.length) * i < mouseX - this.margin.left)
+                    break
+            }
+
+            this.modules[i].mouseEvent(mouseX, mouseY, this.tooltip, event)
+
+/*
+            var markup = `
+                            <span>X: <i>${mouseX}</i></span>
+                            <span>Y: <i>${mouseY}</i></span>
+                            `
+            this.tooltip.html(markup)
+            this.tooltip
+                .style('top', d3.event.pageY + 5 + 'px')
+                .style('left', d3.event.pageX + 5 + 'px')
+                .classed('open', true)*/
+        }else{
+            this.tooltip
+                .classed('open', false)
+        }
+
     }
 
     divOptions(options){
@@ -128,6 +181,7 @@ export class Chart{
         this.modules.forEach(function(el){
             el.update(ts)
         })
+        if(this.outlier) this.outlier.update(ts)
     }
 
     draw(){
@@ -152,6 +206,7 @@ export class Chart{
         this.modules.forEach(function(el){
             el.draw()
         })
+        if(this.outlier) this.outlier.draw()
 
         // Y AXIS
         context.beginPath()

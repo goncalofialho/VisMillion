@@ -98,6 +98,19 @@ canvas{
     background:white;
     border: solid 1px;
 }
+.tooltip{
+    color:white;
+    background: #000000ad;
+    border-radius: 5px;
+    font-size:12px;
+    padding: 5px 10px;
+    transition: opacity 300ms ease-in-out;
+    font-family: monospace;
+}
+
+.tooltip.open{
+    opacity : 1;
+}
 .modules-options .mod-option fieldset legend{
     display: block;
     -webkit-padding-start: 2px;
