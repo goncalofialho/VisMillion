@@ -56,7 +56,7 @@ export class Connection{
                 data: data
             })
             packs += 1
-            $('#package-count p i').text(packs)
+            $('#package-count p:first-child i').text(packs)
         })
         var connection = this
         this.socket.on('delay', function(data){

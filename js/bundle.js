@@ -11,11 +11,17 @@ class Chart{
         this.yScale = options.yScale || d3.scaleLinear();
         this.timerControl;
         this.connection;
-        this.canvas = d3.select(".bigvis").append("canvas")
+        this.outlierBox = options.outlierBox || {width: this.width, height: 100};
+        this.margin.top = this.margin.top + this.outlierBox.height;
+        this.container = options.container || d3.select('.bigvis');
+        this.canvas = this.container.append("canvas")
                 .attr('id','canvas')
                 .attr("width", this.width + this.margin.left + this.margin.right)
                 .attr("height", this.height + this.margin.top + this.margin.bottom);
-
+        d3.select(this.container.node().parentNode).style('max-width', this.width + this.margin.left + this.margin.right + 'px');
+        d3.select(this.container.node().parentNode).style('padding', '0px');
+        this.startTime = new Date();
+        this.startTimeText = d3.select('#package-count p:last-child i');
         this.x = d3.scaleTime().range([0, this.width]);
         this.y = this.yScale.range([this.height, 0]);
 
@@ -105,10 +111,14 @@ class Chart{
         var time1 = Date.now();
         this.fps.text(Math.round(1000/ (time1 - this.time0)));
         this.time0 = time1;
+
     }
 
     update(){
         var ts = new Date();
+        // update date
+        var delta = new Date(ts - this.startTime);
+        this.startTimeText.text(checkTime(delta.getHours() - 1) + ':' + checkTime(delta.getMinutes()) + ':' + checkTime(delta.getSeconds()));
 
         // Axis
         var width = this.modules[0].type != "barchart" ? this.width :  this.width - (this.width / this.modules.length);
@@ -298,6 +308,7 @@ class Linechart extends Module{
         // OPTIONS
         this.flow = options.flow || 'low';
         this.boxPlots = [];
+        this.dots = [];
         this.boxPlotSteps = options.boxPlotSteps || 20;
 
         // COLORS
@@ -439,8 +450,6 @@ class Linechart extends Module{
         var graphsInFront = 3;
         this.data = this.chart.filterData(startTime, new Date(endTime.getTime() + (delta * 3)));
 
-
-
         // UPDATE DOMAINS
         this.x = d3.scaleTime().range([0, this.own_width]);
         this.x.domain([startTime, endTime]);
@@ -451,6 +460,8 @@ class Linechart extends Module{
             if(this.boxPlots[i].ts > startTime.getTime() - delta * 2)
                 break
         }
+
+
         this.boxPlots.splice(0,i);
 
         /* inserting new data */
@@ -481,12 +492,45 @@ class Linechart extends Module{
                 });
             }
         }
+
+        if(this.chart.modules[this.index + 1].type == 'scatterchart' && this.chart.modules[this.index + 1].flow != 'high'){
+            this.dotsOptions = {
+                    color : this.chart.modules[this.index + 1].dotsColor,
+                    r     : this.chart.modules[this.index + 1].dotsRadius,
+                    vanish: d3.scaleLinear().domain([new Date(endTime.getTime() - (delta * graphsInFront)),endTime]).range(['transparent', this.chart.modules[this.index + 1].dotsColor]).interpolate(d3.interpolateRgb)
+            };
+            this.dots = this.chart.filterData(new Date(endTime.getTime() - (delta * graphsInFront)),endTime);
+        }
+
     }
 
 
     draw(){
         var context = this.chart.context;
         var parent = this;
+
+        context.beginPath();
+        context.moveTo(parent.x1 + parent.chart.margin.left + parent.own_width, parent.chart.margin.top);
+        context.lineTo(parent.x1 + parent.chart.margin.left + parent.own_width, parent.chart.margin.top + parent.chart.height);
+        context.stroke();
+        context.closePath();
+
+        if(this.dots.length > 0 && this.chart.modules[this.index + 1].type == 'scatterchart'){
+            var r = this.dotsOptions.r;
+
+            this.dots.forEach(function(el){
+                // CAREFULL WITH THE
+                let cx = parent.chart.margin.left + parent.chart.modules[parent.index + 1].x1 + parent.chart.modules[parent.index + 1].x(el.ts);
+                let cy = parent.chart.margin.top + parent.chart.modules[parent.index + 1].y(el.data);
+                let color = parent.dotsOptions.vanish(el.ts);
+                context.beginPath();
+                context.fillStyle = color;
+                context.arc(cx, cy, r, 0, 2 * Math.PI, false);
+                context.fill();
+                context.closePath();
+            });
+
+        }
         if(this.flow == 'low'){
             var lineGenerator = d3.line()
                     .x(function(d){ return parent.chart.margin.left + parent.x1 + parent.x(d.ts); })
@@ -610,7 +654,7 @@ class Scatterchart extends Module{
             squareDensity: this.squareDensity
         };
         var markup = `
-            <div class="mod-option">
+            <div class="mod-option" scatter>
                 <h3>${options.title}</h3>
                 <fieldset id="scatterchart${options.index}">
                     <legend>Select Flow </legend>
@@ -780,17 +824,18 @@ class Scatterchart extends Module{
 
         // Low Flow (Isto e lento)
         if(this.flow == 'both' || this.flow == 'low'){
+
             this.data.forEach(function(el){
                 let cx = parent.chart.margin.left + parent.x1 + parent.x(el.ts);
                 let cy = parent.chart.margin.top + parent.y(el.data);
-                //let color = 'orange'
                 context.beginPath();
-              context.fillStyle = color;
-              context.arc(cx, cy, r, 0, 2 * Math.PI, false);
-              context.fill();
-              context.closePath();
-
+                context.fillStyle = color;
+                context.arc(cx, cy, r, 0, 2 * Math.PI, false);
+                context.fill();
+                context.closePath();
             });
+          context.fill();
+          context.closePath();
         }
         if(this.flow == 'both' || this.flow == 'high'){
 
@@ -843,9 +888,13 @@ class Barchart extends Module{
         this.yScatter = this.chart.y.copy(); // d3.scaleLinear().domain(this.chart.y.domain()).range([this.chart.height, 0])
         this.xScatter = d3.scaleTime().range([0, this.own_width]);
         this.xScatter.domain([startTime, endTime]);
+        this.lastEndTime  = null;
 
         this.barsData = [];
         for(let x = 0; x < this.numBars; x++){ this.barsData.push(0);}
+
+        this.transitors = [];
+        for(let x = 0; x < this.numBars; x++){ this.transitors.push(null);}
 
         this.bandwidth = this.chart.height / this.numBars;
 
@@ -914,14 +963,35 @@ class Barchart extends Module{
         var endTime = new Date(ts - ((this.own_width / this.chart.pixelsPerSecond * 1000) * ((this.chart.modules.length - 1) - this.index) ));
         var startTime = new Date(endTime.getTime() - this.own_width / this.chart.pixelsPerSecond * 1000);
 
-        this.data = this.chart.filterData(null, endTime);
+        this.data = this.chart.filterData(this.lastEndTime, endTime);
+        this.lastEndTime = endTime;
 
         var max = Math.max.apply(Math, this.domain);
         var slices = max/this.numBars;
 
-        // TODO: OPTIMIZAR!!
         for(let i = 0; i < this.barsData.length; i++){
-            this.barsData[i] = this.data.filter( el => Math.round(this.y(el.data)) == i ).length;
+            let add = this.data.filter( el => Math.floor(this.y(el.data)) == i ).length;
+            let scale = this.transitors[i];
+            if(scale != null && scale.domain()[1] < ts){
+                this.barsData[i] = scale.range()[1];
+                this.transitors[i] = null;
+                scale = this.transitions[i];
+            }
+            if(add == 0)
+                continue
+
+            if(scale == null){
+                this.transitors[i] = d3.scaleTime().domain([new Date(ts.getTime()), new Date(ts.getTime() + this.chart.transitions)]).range([this.barsData[i] , this.barsData[i] + add]);
+            }else{
+                this.transitors[i].domain([scale.domain()[0], new Date(scale.domain()[1].getTime() + (this.chart.transitions / 4))]);
+                this.transitors[i].range([scale.range()[0], scale.range()[1] + add]);
+
+            }
+            //this.barsData[i] += this.data.filter( el => Math.round(this.y(el.data)) == i ).length
+        }
+        for(let i = 0; i < this.barsData.length; i++){
+            if(this.transitors[i] != null)
+                this.barsData[i] = this.transitors[i](ts);
         }
 
         // UPDATE DOMAINS
@@ -1040,7 +1110,7 @@ class Connection{
                 data: data
             });
             packs += 1;
-            $('#package-count p i').text(packs);
+            $('#package-count p:first-child i').text(packs);
         });
         var connection = this;
         this.socket.on('delay', function(data){
@@ -1075,10 +1145,11 @@ $(document).ready(function(){
         margin: {top: 50, right: 40, left: 40, bottom: 20},
         transitions: 300,
         pixelsPerSecond: 10,
-        bgColor: '#fff',
+        bgColor: '#ffffff',
         xDomain: [0,100],
-        yDomain: [1e-5,100],
-        yScale: d3.scaleLog()
+        yDomain: [1e-6,100],
+        yScale: d3.scaleLog(),
+        container: d3.select('.bigvis')
     });
 
     // MODULES
@@ -1096,7 +1167,7 @@ $(document).ready(function(){
         chart : obj,
         index : obj.modules.length,
         flow  : 'high',
-        boxPlotSteps : 40
+        boxPlotSteps : 30
     });
 
     var module2 = new Scatterchart({

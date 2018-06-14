@@ -17,10 +17,11 @@ $(document).ready(function(){
         margin: {top: 50, right: 40, left: 40, bottom: 20},
         transitions: 300,
         pixelsPerSecond: 10,
-        bgColor: '#fff',
+        bgColor: '#ffffff',
         xDomain: [0,100],
-        yDomain: [1e-5,100],
-        yScale: d3.scaleLog()
+        yDomain: [1e-6,100],
+        yScale: d3.scaleLog(),
+        container: d3.select('.bigvis')
     })
 
     // MODULES
@@ -38,7 +39,7 @@ $(document).ready(function(){
         chart : obj,
         index : obj.modules.length,
         flow  : 'high',
-        boxPlotSteps : 40
+        boxPlotSteps : 30
     })
 
     var module2 = new Scatterchart({

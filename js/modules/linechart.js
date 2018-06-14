@@ -14,6 +14,7 @@ export class Linechart extends Module{
         // OPTIONS
         this.flow = options.flow || 'low'
         this.boxPlots = []
+        this.dots = []
         this.boxPlotSteps = options.boxPlotSteps || 20
 
         // COLORS
@@ -155,8 +156,6 @@ export class Linechart extends Module{
         var graphsInFront = 3
         this.data = this.chart.filterData(startTime, new Date(endTime.getTime() + (delta * 3)))
 
-
-
         // UPDATE DOMAINS
         this.x = d3.scaleTime().range([0, this.own_width])
         this.x.domain([startTime, endTime])
@@ -167,6 +166,8 @@ export class Linechart extends Module{
             if(this.boxPlots[i].ts > startTime.getTime() - delta * 2)
                 break
         }
+
+
         this.boxPlots.splice(0,i)
 
         /* inserting new data */
@@ -197,12 +198,46 @@ export class Linechart extends Module{
                 })
             }
         }
+
+        if(this.chart.modules[this.index + 1].type == 'scatterchart' && this.chart.modules[this.index + 1].flow != 'high'){
+            this.dotsOptions = {
+                    color : this.chart.modules[this.index + 1].dotsColor,
+                    r     : this.chart.modules[this.index + 1].dotsRadius,
+                    vanish: d3.scaleLinear().domain([new Date(endTime.getTime() - (delta * graphsInFront)),endTime]).range(['transparent', this.chart.modules[this.index + 1].dotsColor]).interpolate(d3.interpolateRgb)
+            }
+            this.dots = this.chart.filterData(new Date(endTime.getTime() - (delta * graphsInFront)),endTime)
+        }
+
     }
 
 
     draw(){
         var context = this.chart.context
         var parent = this
+
+        context.beginPath()
+        context.moveTo(parent.x1 + parent.chart.margin.left + parent.own_width, parent.chart.margin.top)
+        context.lineTo(parent.x1 + parent.chart.margin.left + parent.own_width, parent.chart.margin.top + parent.chart.height)
+        context.stroke()
+        context.closePath()
+
+        if(this.dots.length > 0 && this.chart.modules[this.index + 1].type == 'scatterchart'){
+            var color = 'red' //this.dotsOptions.color
+            var r = this.dotsOptions.r
+
+            this.dots.forEach(function(el){
+                // CAREFULL WITH THE
+                let cx = parent.chart.margin.left + parent.chart.modules[parent.index + 1].x1 + parent.chart.modules[parent.index + 1].x(el.ts)
+                let cy = parent.chart.margin.top + parent.chart.modules[parent.index + 1].y(el.data)
+                let color = parent.dotsOptions.vanish(el.ts)
+                context.beginPath()
+                context.fillStyle = color
+                context.arc(cx, cy, r, 0, 2 * Math.PI, false)
+                context.fill()
+                context.closePath()
+            })
+
+        }
         if(this.flow == 'low'){
             var lineGenerator = d3.line()
                     .x(function(d){ return parent.chart.margin.left + parent.x1 + parent.x(d.ts); })

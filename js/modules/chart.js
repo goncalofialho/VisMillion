@@ -10,11 +10,17 @@ export class Chart{
         this.yScale = options.yScale || d3.scaleLinear()
         this.timerControl
         this.connection
-        this.canvas = d3.select(".bigvis").append("canvas")
+        this.outlierBox = options.outlierBox || {width: this.width, height: 100}
+        this.margin.top = this.margin.top + this.outlierBox.height
+        this.container = options.container || d3.select('.bigvis')
+        this.canvas = this.container.append("canvas")
                 .attr('id','canvas')
                 .attr("width", this.width + this.margin.left + this.margin.right)
                 .attr("height", this.height + this.margin.top + this.margin.bottom)
-
+        d3.select(this.container.node().parentNode).style('max-width', this.width + this.margin.left + this.margin.right + 'px')
+        d3.select(this.container.node().parentNode).style('padding', '0px')
+        this.startTime = new Date()
+        this.startTimeText = d3.select('#package-count p:last-child i')
         this.x = d3.scaleTime().range([0, this.width])
         this.y = this.yScale.range([this.height, 0])
 
@@ -104,10 +110,14 @@ export class Chart{
         var time1 = Date.now()
         this.fps.text(Math.round(1000/ (time1 - this.time0)))
         this.time0 = time1
+
     }
 
     update(){
         var ts = new Date()
+        // update date
+        var delta = new Date(ts - this.startTime)
+        this.startTimeText.text(checkTime(delta.getHours() - 1) + ':' + checkTime(delta.getMinutes()) + ':' + checkTime(delta.getSeconds()))
 
         // Axis
         var width = this.modules[0].type != "barchart" ? this.width :  this.width - (this.width / this.modules.length)

@@ -27,6 +27,7 @@ column_timestamp = 'timestamp'
 #csvfile = csvfile.sort_values(by=column_timestamp)
 column = 'trans_satoshis'
 maximum = len(csvfile.index)
+start_at = 59000
 
 class CountThread(Thread):
     """Stream data on Thread"""
@@ -39,7 +40,7 @@ class CountThread(Thread):
 
     def get_data(self):
         """ GET DATA AND EMIT TO SOCKET """
-        count = 0
+        count = start_at
         while True:
             with self.pause_cond:
                 while self.paused:

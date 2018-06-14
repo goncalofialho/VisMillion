@@ -21,9 +21,14 @@ export class Barchart extends Module{
         this.yScatter = this.chart.y.copy() // d3.scaleLinear().domain(this.chart.y.domain()).range([this.chart.height, 0])
         this.xScatter = d3.scaleTime().range([0, this.own_width])
         this.xScatter.domain([startTime, endTime])
+        this.lastEndTime  = null
 
         this.barsData = []
         for(let x = 0; x < this.numBars; x++){ this.barsData.push(0)}
+
+        this.transitors = []
+        var date = new Date()
+        for(let x = 0; x < this.numBars; x++){ this.transitors.push(null)}
 
         this.bandwidth = this.chart.height / this.numBars
 
@@ -92,15 +97,35 @@ export class Barchart extends Module{
         var endTime = new Date(ts - ((this.own_width / this.chart.pixelsPerSecond * 1000) * ((this.chart.modules.length - 1) - this.index) ))
         var startTime = new Date(endTime.getTime() - this.own_width / this.chart.pixelsPerSecond * 1000)
 
-        this.data = this.chart.filterData(null, endTime)
+        this.data = this.chart.filterData(this.lastEndTime, endTime)
+        this.lastEndTime = endTime
 
         var max = Math.max.apply(Math, this.domain)
         var slices = max/this.numBars
-        var parent = this
 
-        // TODO: OPTIMIZAR!!
         for(let i = 0; i < this.barsData.length; i++){
-            this.barsData[i] = this.data.filter( el => Math.round(this.y(el.data)) == i ).length
+            let add = this.data.filter( el => Math.floor(this.y(el.data)) == i ).length
+            let scale = this.transitors[i]
+            if(scale != null && scale.domain()[1] < ts){
+                this.barsData[i] = scale.range()[1]
+                this.transitors[i] = null
+                scale = this.transitions[i]
+            }
+            if(add == 0)
+                continue
+
+            if(scale == null){
+                this.transitors[i] = d3.scaleTime().domain([new Date(ts.getTime()), new Date(ts.getTime() + this.chart.transitions)]).range([this.barsData[i] , this.barsData[i] + add])
+            }else{
+                this.transitors[i].domain([scale.domain()[0], new Date(scale.domain()[1].getTime() + (this.chart.transitions / 4))])
+                this.transitors[i].range([scale.range()[0], scale.range()[1] + add])
+
+            }
+            //this.barsData[i] += this.data.filter( el => Math.round(this.y(el.data)) == i ).length
+        }
+        for(let i = 0; i < this.barsData.length; i++){
+            if(this.transitors[i] != null)
+                this.barsData[i] = this.transitors[i](ts)
         }
 
         // UPDATE DOMAINS

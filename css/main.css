@@ -1,3 +1,14 @@
+body{
+    background: url(bg.jpg) no-repeat fixed center;
+   /* background: url(https://i.stack.imgur.com/NEuip.jpg) no-repeat fixed center;*/
+   /* background: url(https://onaircode.com/wp-content/uploads/2018/03/Multiple-Backgrounds-CSS3.jpg) no-repeat fixed center;*/
+    background-size: cover;
+        font-family: monospace;
+}
+canvas{
+    border-radius: 5px;
+
+}
 #init_button{
   margin-left: 10px;
 }
@@ -5,29 +16,37 @@
 .selects select {
   margin-right: 10px;
 }
-
+.container > h2 {
+    color: white;
+    text-align:center;
+    margin-top: 20px;
+    font-weight:bold;
+}
 .options{
     width: 100%;
     float: left;
+    color:white;
 }
 .options > span{
     margin: 10px 0px;
     float: left;
-    width: 100%;
+    width: 50%;
 }
 .options span p{
-    width: auto;
+     width: 50%;
     float: left;
-    margin: 0px 10px;
+    /* margin: 0px 10px; */
+    text-align: center;
 }
 .options span #streamDelay{
-    width: 300px;
+    width: 50%;
     float: left;
-    margin: 6px 0px;
-    margin-left:10px;
+    margin: 2px 0px;
 }
 
-
+#fps{
+    color:white;
+}
 .modules-options{
     width:100%;
     margin-top:20px;
@@ -38,10 +57,12 @@
     float:left;
     padding: 0 10px;
 }
-
 .modules-options .mod-option h3{
     text-align:center;
     text-transform: capitalize;
+    color:white;
+    font-weight: bold;
+    text-shadow: -1px 0 #00000052, 0px -1px black, 0px 0px #0000007a, 2px -1px 5px #000000ab;
 }
 .modules-options .mod-option .lineChartColors p{
 
@@ -74,6 +95,8 @@
     border-image: initial;
     padding-bottom: 0px;
     margin-bottom: 10px;
+    background:white;
+    border: solid 1px;
 }
 .modules-options .mod-option fieldset legend{
     display: block;
@@ -85,6 +108,14 @@
     border-image: initial;
     font-size: 16px;
     width: auto;
+    background: white;
+    border-radius: 7px;
+    border-top: solid 1px;
+    padding: 0px 10px;
+    border-left: solid 1px;
+    border-bottom-left-radius: 0px;
+    border-bottom-right-radius: 0px;
+    border-right: solid 1px;
 }
 .modules-options .mod-option fieldset p > span {
     text-align: left;
@@ -97,6 +128,10 @@
     width: 50%;
     float: left;
     text-align: center;
+}
+
+.mod-option[scatter] fieldset > span.radiobuttons {
+    width: 33%;
 }
 
 .modules-options .mod-option #chartOptions button{

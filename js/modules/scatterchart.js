@@ -37,7 +37,7 @@ export class Scatterchart extends Module{
             squareDensity: this.squareDensity
         }
         var markup = `
-            <div class="mod-option">
+            <div class="mod-option" scatter>
                 <h3>${options.title}</h3>
                 <fieldset id="scatterchart${options.index}">
                     <legend>Select Flow </legend>
@@ -207,17 +207,18 @@ export class Scatterchart extends Module{
 
         // Low Flow (Isto e lento)
         if(this.flow == 'both' || this.flow == 'low'){
+
             this.data.forEach(function(el){
                 let cx = parent.chart.margin.left + parent.x1 + parent.x(el.ts)
                 let cy = parent.chart.margin.top + parent.y(el.data)
-                //let color = 'orange'
                 context.beginPath()
-              context.fillStyle = color
-              context.arc(cx, cy, r, 0, 2 * Math.PI, false)
-              context.fill()
-              context.closePath()
-
+                context.fillStyle = color
+                context.arc(cx, cy, r, 0, 2 * Math.PI, false)
+                context.fill()
+                context.closePath()
             })
+          context.fill()
+          context.closePath()
         }
         if(this.flow == 'both' || this.flow == 'high'){
 
