@@ -20,7 +20,13 @@ function seedBarChart(){
 function incrementBarChart(){
   barArr.push(randomNumberBounds(30,70))
 }
-
+function simulateOutlier(){
+    let now = new Date()
+    obj.data.push({
+        ts: now.getTime(),
+        data: 120
+    })
+}
 function barchartDemo(){
   incrementBarChart()
   obj.update()

@@ -5,7 +5,7 @@ export class Chart{
     constructor(options){
         this.width = options.width || 800
         this.height = options.height || 400
-        this.margin = options.margin || {top: 10, right: 10, left: 10, bottom: 10}
+        this.margin = options.margin || {top: 20, right: 10, left: 10, bottom: 10}
         this.modules = []
         this.transitions = options.transitions || 100
         this.pixelsPerSecond = options.pixelsPerSecond || 10
@@ -14,7 +14,7 @@ export class Chart{
         this.timerControl
         this.connection
         if(options.outlier){
-            var outlierHeight = 100
+            var outlierHeight =/* options.outlier_opts.outlierHeight ||*/ 100
             this.outlierBox = options.outlierBox || {width: this.width, height: outlierHeight}
             this.margin.top = this.margin.top + this.outlierBox.height
         }
@@ -43,12 +43,12 @@ export class Chart{
         this.fps = d3.select('#fps span')
 
         if(options.outlier){
-            let opts = {
-                chart : this,
-                width : this.width,
-                height: outlierHeight,
-                thresholdBottom : this.y.domain()[1]
-            }
+            let opts = options.outlier_opts ||  {
+                                                    chart : this,
+                                                    width : this.width,
+                                                    height: outlierHeight,
+                                                    thresholdBottom : this.y.domain()[1]
+                                                }
             this.outlier = new Outlier(opts)
         }
 
@@ -79,16 +79,9 @@ export class Chart{
 
             this.modules[i].mouseEvent(mouseX, mouseY, this.tooltip, event)
 
-/*
-            var markup = `
-                            <span>X: <i>${mouseX}</i></span>
-                            <span>Y: <i>${mouseY}</i></span>
-                            `
-            this.tooltip.html(markup)
-            this.tooltip
-                .style('top', d3.event.pageY + 5 + 'px')
-                .style('left', d3.event.pageX + 5 + 'px')
-                .classed('open', true)*/
+
+        }else if(this.outlier && insideBox({x: mouseX, y: mouseY}, {x: this.margin.left, y: this.margin.top - this.outlier.height, width: this.outlier.width, height: this.outlier.height})){
+            this.outlier.mouseEvent(mouseX, mouseY, this.tooltip, event)
         }else{
             this.tooltip
                 .classed('open', false)
@@ -177,7 +170,7 @@ export class Chart{
         var endTime = new Date(ts)
         var startTime = new Date(endTime.getTime() - width / this.pixelsPerSecond * 1000)
 
-        this.x = d3.scaleTime().range([0, width]).domain([startTime, endTime])
+        this.x = d3.scaleTime().range([0, this.width]).domain([startTime, endTime])
         this.modules.forEach(function(el){
             el.update(ts)
         })
@@ -260,6 +253,26 @@ export class Chart{
 
 
             }
+        }
+
+        if(this.outlier){
+            let x = this.x.copy()
+            x.range([0,this.width])
+            //console.log(x.range())
+            var ticks = x.ticks(10)
+            var tickFormat = d3.timeFormat('%H:%M:%S')
+
+            context.beginPath()
+            context.moveTo(margin.left, margin.top - this.outlier.height)
+            context.lineTo(margin.left + this.width, margin.top - this.outlier.height)
+            for(let i = 0; i < ticks.length; i++){
+                context.moveTo(margin.left + x(ticks[i]), margin.top - this.outlier.height - 2)
+                context.lineTo(margin.left + x(ticks[i]), margin.top - this.outlier.height + 2)
+                context.fillText(tickFormat(ticks[i]), margin.left + x(ticks[i]), margin.top - this.outlier.height - 8)
+            }
+            context.strokeStyle = "black"
+            context.stroke()
+            context.closePath()
         }
     }
 

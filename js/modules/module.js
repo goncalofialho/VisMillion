@@ -18,6 +18,7 @@ export class Module{
         this.x1 = this.own_width * (this.chart.modules.length + 1)
 
         this.chart.addModule(this)
+        this.deltaTimeX = options.deltaTimeX || undefined
     }
 
     // just declarations

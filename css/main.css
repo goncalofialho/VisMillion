@@ -80,6 +80,10 @@ canvas{
     float:left;
     width:100%;
 }
+.tooltip span p {
+    margin-bottom: 2px;
+    margin-top: 2px;
+}
 .modules-options .mod-option fieldset{
     display: block;
     -webkit-margin-start: 2px;

@@ -29,16 +29,43 @@ export class Linechart extends Module{
 
 
     mouseEvent(x, y, tooltip, event){
-        console.log('over line')
-        var markup = `
-                            <span>X: <i>${x}</i></span>
-                            <span>Y: <i>${y}</i></span>
+        var notFound = true
+
+        var timeInterval = this.x.domain()
+        var steps = this.boxPlotSteps
+        var scale = d3.scaleTime().domain(timeInterval).range([0, steps])
+        var delta = scale.invert(1).getTime() - scale.invert(0).getTime()
+        for(var i = 0; i < this.boxPlots.length; i++){
+            let xBox = this.x1 + this.chart.margin.left + (this.x(this.boxPlots[i].ts - delta))
+            let width = this.x(this.boxPlots[i].ts + delta)
+            let yBox = this.chart.margin.top + this.y(this.boxPlots[i][0.75])
+            let height = Math.abs(this.y(this.boxPlots[i]['0.25']) - this.y(this.boxPlots[i]['0.75']))
+
+            if(insideBox({x:x, y:y},{x:xBox, y:yBox, width: width, height: height})){
+                var val = i
+                var markup = `
+                            <span>
+                                <p>Quartile 0.75 - <i>${this.boxPlots[i]['0.75']}</i></p>
+                                <p>Median 0.5 - <i>${this.boxPlots[i]['0.5']}</i></p>
+                                <p>Quartile 0.25 - <i>${this.boxPlots[i]['0.5']}</i></p>
+                            </span>
                             `
-        tooltip.html(markup)
-        tooltip
-         /*   .style('top', event.pageY + 5 + 'px')
-            .style('left', event.pageX + 5 + 'px')*/
-            .classed('open', false)
+                tooltip.html(markup)
+                tooltip
+                    .style('top', event.pageY + 5 + 'px')
+                    .style('left', event.pageX + 5 + 'px')
+                    .classed('open', true)
+
+                notFound = false
+                break
+            }
+
+        }
+
+        if( notFound ){
+            tooltip
+                .classed('open', false)
+        }
     }
 
 
@@ -221,6 +248,10 @@ export class Linechart extends Module{
                     vanish: d3.scaleLinear().domain([new Date(endTime.getTime() - (delta * graphsInFront)),endTime]).range(['transparent', this.chart.modules[this.index + 1].dotsColor]).interpolate(d3.interpolateRgb)
             }
             this.dots = this.chart.filterData(new Date(endTime.getTime() - (delta * graphsInFront)),endTime)
+            this.dots = this.dots.filter( el => el.data <= this.chart.y.domain()[1])
+        }
+        if( this.chart.modules[this.index + 1].flow == 'high'){
+            this.dots = []
         }
 
     }

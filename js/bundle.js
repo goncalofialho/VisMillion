@@ -5,12 +5,76 @@ class Outlier{
         this.height = options.height;
         this.width = options.width;
         this.data = [];
-        this.thresholdTop;
+        this.thresholdTop = options.thresholdBottom * 2;
         this.thresholdBottom = options.thresholdBottom;
-
+        this.lastEndTime  = null;
+        this.x1 = 0;
+        this.y = d3.scaleLinear().domain([this.thresholdBottom, this.thresholdBottom * 2]).range([this.height, 0]);
+        this.defaultRadius = options.radius || 5;
+        var date = new Date();
+        this.scaleRadius = d3.scaleTime().domain([date, new Date(date.getTime() + this.chart.transitions * 2)]).range([this.defaultRadius / 2 , this.defaultRadius ]);
     }
+
+
+    mouseEvent(x, y, tooltip, event){
+        var notFound = true;
+
+        for( let i = 0; i < this.data.length; i++){
+            let el = this.data[i];
+            let xBox = (this.chart.margin.left + this.chart.x(el.ts)) - this.radius;
+            let yBox = (this.chart.margin.top - this.height + this.y(el.data)) - this.radius;
+            let width = this.radius * 2;
+            let height = this.radius * 2;
+            if(insideBox({x:x, y:y},{x:xBox, y:yBox, width: width, height: height})){
+                let data = el.data;
+                let ts = (new Date(el.ts)).toLocaleString();
+                var markup = `
+                            <span>
+                                <p>Timestamp  : <i>${ts}</i></p>
+                                <p>Data Value : <i>${data}</i></p>
+                            </span>
+                            `;
+                tooltip.html(markup);
+                tooltip
+                    .style('top', event.pageY + 5 + 'px')
+                    .style('left', event.pageX + 5 + 'px')
+                    .classed('open', true);
+
+                notFound = false;
+                break
+            }
+        }
+
+        if( notFound ){
+            tooltip
+                .classed('open', false);
+        }
+    }
+
     update(ts){
-        //console.log('updating')
+        var endTime = new Date(ts);
+        var data = this.chart.filterData(this.lastEndTime, endTime);
+        data = data.filter( el => el.data > this.thresholdBottom && el.data <= this.thresholdTop);
+        this.lastEndTime = endTime;
+        if(data.length > 0){
+            for(let i = 0; i < data.length; i++){
+                this.data.push(data[i]);
+            }
+        }
+        this.x1 = this.chart.modules[0].type == 'barchart' ? this.chart.modules[0].own_width : 0;
+
+        if( ts > this.scaleRadius.domain()[1].getTime() ){
+            this.radius = this.scaleRadius.range()[1];
+            let date = new Date();
+            let new_range = this.scaleRadius.range().reverse();
+            this.scaleRadius = d3.scaleTime().domain([date, new Date(date.getTime() + this.chart.transitions * 2)]).range(new_range);
+
+
+        }else{
+            this.radius = this.scaleRadius(ts);
+        }
+        //this.radius = this.scaleRadius(ts) //> this.defaultRadius ? this.defaultRadius : this.scaleRadius(ts)
+
     }
     draw(){
         var context = this.chart.context;
@@ -18,11 +82,27 @@ class Outlier{
         var y = this.chart.margin.top - this.height;
         var width = this.width;
         var height = this.height;
-        context.beginPath();
-        context.strokeStyle = 'black';
-        context.rect(x, y, width, height);
-        context.stroke();
-        context.closePath();
+        var parent = this;
+        var r = this.radius;
+        var color = 'black'; //this.dotsColor
+
+        for(var i = 0; i < this.data.length ; i++){
+            let el = this.data[i];
+            let cx = parent.chart.margin.left  + parent.chart.x(el.ts);
+            if (cx < parent.chart.margin.left) continue
+            let cy = parent.chart.margin.top - this.height + this.y(el.data);
+            context.beginPath();
+            context.fillStyle = color;
+            context.arc(cx, cy, r, 0, 2 * Math.PI, false);
+            context.fill();
+            context.closePath();
+        }
+
+     /*   context.beginPath()
+        context.strokeStyle = 'black'
+        context.rect(x, y, width, height)
+        context.stroke()
+        context.closePath()*/
         //console.log('drawing')
     }
 }
@@ -31,7 +111,7 @@ class Chart{
     constructor(options){
         this.width = options.width || 800;
         this.height = options.height || 400;
-        this.margin = options.margin || {top: 10, right: 10, left: 10, bottom: 10};
+        this.margin = options.margin || {top: 20, right: 10, left: 10, bottom: 10};
         this.modules = [];
         this.transitions = options.transitions || 100;
         this.pixelsPerSecond = options.pixelsPerSecond || 10;
@@ -40,7 +120,7 @@ class Chart{
         this.timerControl;
         this.connection;
         if(options.outlier){
-            var outlierHeight = 100;
+            var outlierHeight =/* options.outlier_opts.outlierHeight ||*/ 100;
             this.outlierBox = options.outlierBox || {width: this.width, height: outlierHeight};
             this.margin.top = this.margin.top + this.outlierBox.height;
         }
@@ -69,12 +149,12 @@ class Chart{
         this.fps = d3.select('#fps span');
 
         if(options.outlier){
-            let opts = {
-                chart : this,
-                width : this.width,
-                height: outlierHeight,
-                thresholdBottom : this.y.domain()[1]
-            };
+            let opts = options.outlier_opts ||  {
+                                                    chart : this,
+                                                    width : this.width,
+                                                    height: outlierHeight,
+                                                    thresholdBottom : this.y.domain()[1]
+                                                };
             this.outlier = new Outlier(opts);
         }
 
@@ -105,16 +185,9 @@ class Chart{
 
             this.modules[i].mouseEvent(mouseX, mouseY, this.tooltip, event);
 
-/*
-            var markup = `
-                            <span>X: <i>${mouseX}</i></span>
-                            <span>Y: <i>${mouseY}</i></span>
-                            `
-            this.tooltip.html(markup)
-            this.tooltip
-                .style('top', d3.event.pageY + 5 + 'px')
-                .style('left', d3.event.pageX + 5 + 'px')
-                .classed('open', true)*/
+
+        }else if(this.outlier && insideBox({x: mouseX, y: mouseY}, {x: this.margin.left, y: this.margin.top - this.outlier.height, width: this.outlier.width, height: this.outlier.height})){
+            this.outlier.mouseEvent(mouseX, mouseY, this.tooltip, event);
         }else{
             this.tooltip
                 .classed('open', false);
@@ -203,7 +276,7 @@ class Chart{
         var endTime = new Date(ts);
         var startTime = new Date(endTime.getTime() - width / this.pixelsPerSecond * 1000);
 
-        this.x = d3.scaleTime().range([0, width]).domain([startTime, endTime]);
+        this.x = d3.scaleTime().range([0, this.width]).domain([startTime, endTime]);
         this.modules.forEach(function(el){
             el.update(ts);
         });
@@ -286,6 +359,26 @@ class Chart{
 
             }
         }
+
+        if(this.outlier){
+            let x = this.x.copy();
+            x.range([0,this.width]);
+            //console.log(x.range())
+            var ticks = x.ticks(10);
+            var tickFormat = d3.timeFormat('%H:%M:%S');
+
+            context.beginPath();
+            context.moveTo(margin.left, margin.top - this.outlier.height);
+            context.lineTo(margin.left + this.width, margin.top - this.outlier.height);
+            for(let i = 0; i < ticks.length; i++){
+                context.moveTo(margin.left + x(ticks[i]), margin.top - this.outlier.height - 2);
+                context.lineTo(margin.left + x(ticks[i]), margin.top - this.outlier.height + 2);
+                context.fillText(tickFormat(ticks[i]), margin.left + x(ticks[i]), margin.top - this.outlier.height - 8);
+            }
+            context.strokeStyle = "black";
+            context.stroke();
+            context.closePath();
+        }
     }
 
     clean_board(){
@@ -366,6 +459,7 @@ class Module{
         this.x1 = this.own_width * (this.chart.modules.length + 1);
 
         this.chart.addModule(this);
+        this.deltaTimeX = options.deltaTimeX || undefined;
     }
 
     // just declarations
@@ -404,16 +498,42 @@ class Linechart extends Module{
 
 
     mouseEvent(x, y, tooltip, event){
-        console.log('over line');
-        var markup = `
-                            <span>X: <i>${x}</i></span>
-                            <span>Y: <i>${y}</i></span>
+        var notFound = true;
+
+        var timeInterval = this.x.domain();
+        var steps = this.boxPlotSteps;
+        var scale = d3.scaleTime().domain(timeInterval).range([0, steps]);
+        var delta = scale.invert(1).getTime() - scale.invert(0).getTime();
+        for(var i = 0; i < this.boxPlots.length; i++){
+            let xBox = this.x1 + this.chart.margin.left + (this.x(this.boxPlots[i].ts - delta));
+            let width = this.x(this.boxPlots[i].ts + delta);
+            let yBox = this.chart.margin.top + this.y(this.boxPlots[i][0.75]);
+            let height = Math.abs(this.y(this.boxPlots[i]['0.25']) - this.y(this.boxPlots[i]['0.75']));
+
+            if(insideBox({x:x, y:y},{x:xBox, y:yBox, width: width, height: height})){
+                var markup = `
+                            <span>
+                                <p>Quartile 0.75 - <i>${this.boxPlots[i]['0.75']}</i></p>
+                                <p>Median 0.5 - <i>${this.boxPlots[i]['0.5']}</i></p>
+                                <p>Quartile 0.25 - <i>${this.boxPlots[i]['0.5']}</i></p>
+                            </span>
                             `;
-        tooltip.html(markup);
-        tooltip
-         /*   .style('top', event.pageY + 5 + 'px')
-            .style('left', event.pageX + 5 + 'px')*/
-            .classed('open', false);
+                tooltip.html(markup);
+                tooltip
+                    .style('top', event.pageY + 5 + 'px')
+                    .style('left', event.pageX + 5 + 'px')
+                    .classed('open', true);
+
+                notFound = false;
+                break
+            }
+
+        }
+
+        if( notFound ){
+            tooltip
+                .classed('open', false);
+        }
     }
 
 
@@ -596,6 +716,10 @@ class Linechart extends Module{
                     vanish: d3.scaleLinear().domain([new Date(endTime.getTime() - (delta * graphsInFront)),endTime]).range(['transparent', this.chart.modules[this.index + 1].dotsColor]).interpolate(d3.interpolateRgb)
             };
             this.dots = this.chart.filterData(new Date(endTime.getTime() - (delta * graphsInFront)),endTime);
+            this.dots = this.dots.filter( el => el.data <= this.chart.y.domain()[1]);
+        }
+        if( this.chart.modules[this.index + 1].flow == 'high'){
+            this.dots = [];
         }
 
     }
@@ -733,11 +857,13 @@ class Scatterchart extends Module{
         this.squareLength = options.squareLength || 15;
         this.scatterBoxes = [];
         this.squareColor = options.squareColor || 'blue';
-        this.squareDensity = options.squareDensity || 10;
+        this.squareDensity = options.squareDensity || 100;
+        this.squareDensityRange = options.squareDensityRange || [0,100];
         this.scaleColor = d3.scaleLinear().domain([0,this.squareDensity]).range(['transparent',this.squareColor]).interpolate(d3.interpolateRgb);
 
         this.appendModuleOptions();
         this.flow = options.flow || 'both';
+        this.deltaXScale = options.deltaXScale || null;
     }
 
 
@@ -790,7 +916,8 @@ class Scatterchart extends Module{
             dotsColor: this.dotsColor,
             dotsRadius: this.dotsRadius,
             index: this.index,
-            squareDensity: this.squareDensity
+            squareDensity: this.squareDensity,
+            squareDensityRange : this.squareDensityRange
         };
         var markup = `
             <div class="mod-option" scatter>
@@ -873,8 +1000,8 @@ class Scatterchart extends Module{
         });
 
         $('#squareDensity'+options.index).slider({
-            min:1,
-            max:50,
+            min:options.squareDensityRange[0],
+            max:options.squareDensityRange[1],
             step:1,
             value: module.squareDensity,
             slide: function(event, ui){
@@ -890,12 +1017,15 @@ class Scatterchart extends Module{
     update(ts){
         this.own_width = this.chart.width / this.chart.modules.length;
         this.x1 =  this.own_width * this.index;
-        var endTime = new Date(ts - ((this.own_width / this.chart.pixelsPerSecond * 1000) * ((this.chart.modules.length - 1) - this.index) ));
 
-      //  var endTime = new Date(ts - ((this.own_width / this.chart.pixelsPerSecond * 1000) * ((this.chart.modules.length - 1) - this.index) ))
+        var endTime = new Date(ts - ((this.own_width / this.chart.pixelsPerSecond * 1000) * ((this.chart.modules.length - 1) - this.index) ));
         var startTime = new Date(endTime.getTime() - this.own_width / this.chart.pixelsPerSecond * 1000);
+        this.deltaTimeX = endTime - startTime;
 
         this.data = this.chart.filterData(startTime, endTime);
+
+        // Remove out of domain data
+        this.data = this.data.filter( el => el.data <= this.chart.y.domain()[1]);
 
         // UPDATE DOMAINS
         this.x = d3.scaleTime().range([0, this.own_width]);
@@ -973,8 +1103,8 @@ class Scatterchart extends Module{
                 context.fill();
                 context.closePath();
             });
-          context.fill();
-          context.closePath();
+          //context.fill()
+          //context.closePath()
         }
         if(this.flow == 'both' || this.flow == 'high'){
 
@@ -1027,13 +1157,17 @@ class Barchart extends Module{
         this.yScatter = this.chart.y.copy(); // d3.scaleLinear().domain(this.chart.y.domain()).range([this.chart.height, 0])
         this.xScatter = d3.scaleTime().range([0, this.own_width]);
         this.xScatter.domain([startTime, endTime]);
-        this.lastEndTime  = null;
+        this.lastEndTime = null;
 
         this.barsData = [];
         for(let x = 0; x < this.numBars; x++){ this.barsData.push(0);}
 
         this.transitors = [];
+        this.colors = [];
+        this.blinkOpacity = options.blinkOpacity || 0.65;
         for(let x = 0; x < this.numBars; x++){ this.transitors.push(null);}
+        for(let x = 0; x < this.numBars; x++){ this.colors.push( {color: this.barsColor, ts: null, func: null });}
+
 
         this.bandwidth = this.chart.height / this.numBars;
 
@@ -1055,8 +1189,6 @@ class Barchart extends Module{
             yBox = this.chart.margin.top + (this.chart.height - this.bandwidth) - (i * this.bandwidth);
             width = scale(this.barsData[i]);
             height = this.bandwidth;
-            //console.log('margin: ' + this.chart.margin.left + '   x1: ' + this.x1 + '   own_width: ' + this.own_width + '   x: '+ this.x(this.barsData[i]) + '  = ' + xBox)
-            //console.log('margin: ' + e + '   x1: ' + a + '   own_width: ' + b + '   x: '+ c + '  = ' + d)
 
             if(insideBox({x:x, y:y},{x:xBox, y:yBox, width: width, height: height})){
                 var val = Math.floor(this.barsData[i]);
@@ -1154,16 +1286,18 @@ class Barchart extends Module{
                 this.barsData[i] = scale.range()[1];
                 this.transitors[i] = null;
                 scale = this.transitions[i];
+                this.colors[i].func = null;
             }
             if(add == 0)
                 continue
 
             if(scale == null){
                 this.transitors[i] = d3.scaleTime().domain([new Date(ts.getTime()), new Date(ts.getTime() + this.chart.transitions)]).range([this.barsData[i] , this.barsData[i] + add]);
+                this.colors[i].func = d3.scaleLinear().domain([new Date(ts.getTime()), new Date(ts.getTime() + this.chart.transitions)]).range([this.blinkOpacity, 1]);
             }else{
                 this.transitors[i].domain([scale.domain()[0], new Date(scale.domain()[1].getTime() + (this.chart.transitions / 4))]);
                 this.transitors[i].range([scale.range()[0], scale.range()[1] + add]);
-
+                this.colors[i].func = d3.scaleLinear().domain([new Date(ts.getTime()), new Date(ts.getTime() + this.chart.transitions)]).range([this.blinkOpacity, 1]);
             }
             //this.barsData[i] += this.data.filter( el => Math.round(this.y(el.data)) == i ).length
         }
@@ -1172,6 +1306,13 @@ class Barchart extends Module{
                 this.barsData[i] = this.transitors[i](ts);
         }
 
+        // UPDATE COLORS
+        for(let i = 0; i < this.barsData.length ; i++){
+            let color = d3.color(this.barsColor);
+            if(this.colors[i].func != null)
+                color.opacity = this.colors[i].func(ts);
+            this.colors[i].color = color.toString();
+        }
         // UPDATE DOMAINS
         if( Math.max( ...this.barsData ) > this.x.domain()[1] * this.maxWidth ){
             this.x.domain([0, this.x.domain()[1] + (this.x.domain()[1] * (1 - this.maxWidth))]);
@@ -1220,13 +1361,8 @@ class Barchart extends Module{
                 y = this.chart.margin.top + (this.chart.height - this.bandwidth) - (i * this.bandwidth);
                 width = this.x(this.barsData[i]);
                 height = this.bandwidth;
-                a = this.x1;
-                b = this.own_width;
-                if(i==0){ c = this.x(this.barsData[i]);}
-                e = this.chart.margin.left;
-                domain = this.x.range();
             }
-            color = this.barsColor;
+            color = this.colors[i].color;
             context.beginPath();
             context.fillStyle = color;
             context.rect(x,y,width,height);
@@ -1237,7 +1373,6 @@ class Barchart extends Module{
         }
     }
 }
-var a,b,c,e,domain;
 
 class Connection{
     constructor(options){
@@ -1326,7 +1461,7 @@ $(document).ready(function(){
     obj = new Chart({
         width: $('.container').width() ,
         height: 400,
-        margin: {top: 50, right: 40, left: 40, bottom: 20},
+        margin: {top: 30, right: 40, left: 40, bottom: 20},
         transitions: 300,
         pixelsPerSecond: 10,
         bgColor: '#ffffff',
@@ -1335,6 +1470,10 @@ $(document).ready(function(){
         yScale: d3.scaleLog(),
         container: d3.select('.bigvis'),
         outlier: true
+       /* outlier_opts : {
+            outlierHeight : 100,
+
+        }*/
     });
 
     // MODULES
@@ -1362,7 +1501,8 @@ $(document).ready(function(){
         dotsRadius : 1,
         squareLength : 20,
         squareColor : 'orange',
-        squareDensity : 30,
+        squareDensity : 50,
+        squareDensityRange : [0, 300],
         maxFlowDrawDots : 900
     });
 
@@ -1376,6 +1516,7 @@ $(document).ready(function(){
 
     //OTHERS
     $( "#streamDelay" ).slider({
+        animate: true,
         min:0.001,
         max:2,
         step:0.001,

@@ -20,11 +20,13 @@ export class Scatterchart extends Module{
         this.squareLength = options.squareLength || 15
         this.scatterBoxes = []
         this.squareColor = options.squareColor || 'blue'
-        this.squareDensity = options.squareDensity || 10
+        this.squareDensity = options.squareDensity || 100
+        this.squareDensityRange = options.squareDensityRange || [0,100]
         this.scaleColor = d3.scaleLinear().domain([0,this.squareDensity]).range(['transparent',this.squareColor]).interpolate(d3.interpolateRgb)
 
         this.appendModuleOptions()
         this.flow = options.flow || 'both'
+        this.deltaXScale = options.deltaXScale || null
     }
 
 
@@ -77,7 +79,8 @@ export class Scatterchart extends Module{
             dotsColor: this.dotsColor,
             dotsRadius: this.dotsRadius,
             index: this.index,
-            squareDensity: this.squareDensity
+            squareDensity: this.squareDensity,
+            squareDensityRange : this.squareDensityRange
         }
         var markup = `
             <div class="mod-option" scatter>
@@ -160,8 +163,8 @@ export class Scatterchart extends Module{
         })
 
         $('#squareDensity'+options.index).slider({
-            min:1,
-            max:50,
+            min:options.squareDensityRange[0],
+            max:options.squareDensityRange[1],
             step:1,
             value: module.squareDensity,
             slide: function(event, ui){
@@ -177,12 +180,15 @@ export class Scatterchart extends Module{
     update(ts){
         this.own_width = this.chart.width / this.chart.modules.length
         this.x1 =  this.own_width * this.index
-        var endTime = new Date(ts - ((this.own_width / this.chart.pixelsPerSecond * 1000) * ((this.chart.modules.length - 1) - this.index) ))
 
-      //  var endTime = new Date(ts - ((this.own_width / this.chart.pixelsPerSecond * 1000) * ((this.chart.modules.length - 1) - this.index) ))
+        var endTime = new Date(ts - ((this.own_width / this.chart.pixelsPerSecond * 1000) * ((this.chart.modules.length - 1) - this.index) ))
         var startTime = new Date(endTime.getTime() - this.own_width / this.chart.pixelsPerSecond * 1000)
+        this.deltaTimeX = endTime - startTime
 
         this.data = this.chart.filterData(startTime, endTime)
+
+        // Remove out of domain data
+        this.data = this.data.filter( el => el.data <= this.chart.y.domain()[1])
 
         // UPDATE DOMAINS
         this.x = d3.scaleTime().range([0, this.own_width])
@@ -260,8 +266,8 @@ export class Scatterchart extends Module{
                 context.fill()
                 context.closePath()
             })
-          context.fill()
-          context.closePath()
+          //context.fill()
+          //context.closePath()
         }
         if(this.flow == 'both' || this.flow == 'high'){
 

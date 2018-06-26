@@ -14,7 +14,7 @@ $(document).ready(function(){
     obj = new Chart({
         width: $('.container').width() ,
         height: 400,
-        margin: {top: 50, right: 40, left: 40, bottom: 20},
+        margin: {top: 30, right: 40, left: 40, bottom: 20},
         transitions: 300,
         pixelsPerSecond: 10,
         bgColor: '#ffffff',
@@ -23,6 +23,10 @@ $(document).ready(function(){
         yScale: d3.scaleLog(),
         container: d3.select('.bigvis'),
         outlier: true
+       /* outlier_opts : {
+            outlierHeight : 100,
+
+        }*/
     })
 
     // MODULES
@@ -50,7 +54,8 @@ $(document).ready(function(){
         dotsRadius : 1,
         squareLength : 20,
         squareColor : 'orange',
-        squareDensity : 30,
+        squareDensity : 50,
+        squareDensityRange : [0, 300],
         maxFlowDrawDots : 900
     })
 
@@ -64,6 +69,7 @@ $(document).ready(function(){
 
     //OTHERS
     $( "#streamDelay" ).slider({
+        animate: true,
         min:0.001,
         max:2,
         step:0.001,

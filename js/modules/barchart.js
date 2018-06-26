@@ -21,14 +21,17 @@ export class Barchart extends Module{
         this.yScatter = this.chart.y.copy() // d3.scaleLinear().domain(this.chart.y.domain()).range([this.chart.height, 0])
         this.xScatter = d3.scaleTime().range([0, this.own_width])
         this.xScatter.domain([startTime, endTime])
-        this.lastEndTime  = null
+        this.lastEndTime = null
 
         this.barsData = []
         for(let x = 0; x < this.numBars; x++){ this.barsData.push(0)}
 
         this.transitors = []
-        var date = new Date()
+        this.colors = []
+        this.blinkOpacity = options.blinkOpacity || 0.65
         for(let x = 0; x < this.numBars; x++){ this.transitors.push(null)}
+        for(let x = 0; x < this.numBars; x++){ this.colors.push( {color: this.barsColor, ts: null, func: null })}
+
 
         this.bandwidth = this.chart.height / this.numBars
 
@@ -50,8 +53,6 @@ export class Barchart extends Module{
             yBox = this.chart.margin.top + (this.chart.height - this.bandwidth) - (i * this.bandwidth)
             width = scale(this.barsData[i])
             height = this.bandwidth
-            //console.log('margin: ' + this.chart.margin.left + '   x1: ' + this.x1 + '   own_width: ' + this.own_width + '   x: '+ this.x(this.barsData[i]) + '  = ' + xBox)
-            //console.log('margin: ' + e + '   x1: ' + a + '   own_width: ' + b + '   x: '+ c + '  = ' + d)
 
             if(insideBox({x:x, y:y},{x:xBox, y:yBox, width: width, height: height})){
                 var val = Math.floor(this.barsData[i])
@@ -149,16 +150,18 @@ export class Barchart extends Module{
                 this.barsData[i] = scale.range()[1]
                 this.transitors[i] = null
                 scale = this.transitions[i]
+                this.colors[i].func = null
             }
             if(add == 0)
                 continue
 
             if(scale == null){
                 this.transitors[i] = d3.scaleTime().domain([new Date(ts.getTime()), new Date(ts.getTime() + this.chart.transitions)]).range([this.barsData[i] , this.barsData[i] + add])
+                this.colors[i].func = d3.scaleLinear().domain([new Date(ts.getTime()), new Date(ts.getTime() + this.chart.transitions)]).range([this.blinkOpacity, 1])
             }else{
                 this.transitors[i].domain([scale.domain()[0], new Date(scale.domain()[1].getTime() + (this.chart.transitions / 4))])
                 this.transitors[i].range([scale.range()[0], scale.range()[1] + add])
-
+                this.colors[i].func = d3.scaleLinear().domain([new Date(ts.getTime()), new Date(ts.getTime() + this.chart.transitions)]).range([this.blinkOpacity, 1])
             }
             //this.barsData[i] += this.data.filter( el => Math.round(this.y(el.data)) == i ).length
         }
@@ -167,6 +170,13 @@ export class Barchart extends Module{
                 this.barsData[i] = this.transitors[i](ts)
         }
 
+        // UPDATE COLORS
+        for(let i = 0; i < this.barsData.length ; i++){
+            let color = d3.color(this.barsColor)
+            if(this.colors[i].func != null)
+                color.opacity = this.colors[i].func(ts)
+            this.colors[i].color = color.toString()
+        }
         // UPDATE DOMAINS
         if( Math.max( ...this.barsData ) > this.x.domain()[1] * this.maxWidth ){
             this.x.domain([0, this.x.domain()[1] + (this.x.domain()[1] * (1 - this.maxWidth))])
@@ -215,14 +225,8 @@ export class Barchart extends Module{
                 y = this.chart.margin.top + (this.chart.height - this.bandwidth) - (i * this.bandwidth)
                 width = this.x(this.barsData[i])
                 height = this.bandwidth
-                a = this.x1
-                b = this.own_width
-                if(i==0){ c = this.x(this.barsData[i])}
-                d = x
-                e = this.chart.margin.left
-                domain = this.x.range()
             }
-            color = this.barsColor
+            color = this.colors[i].color
             context.beginPath()
             context.fillStyle = color
             context.rect(x,y,width,height)
@@ -233,4 +237,3 @@ export class Barchart extends Module{
         }
     }
 }
-var a,b,c,d,e,domain
