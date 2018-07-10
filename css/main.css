@@ -111,9 +111,27 @@ canvas{
     transition: opacity 300ms ease-in-out;
     font-family: monospace;
 }
+.verticalLine{
+    position: absolute;
+    z-index: 1070;
+    display: block;
+    margin: 0;
+    opacity: 0;
+    background: #000000ad;
+    width:1px;
+    transition: opacity 300ms ease-in-out;
+}
 
-.tooltip.open{
+.tooltip.open,
+.verticalLine.open{
     opacity : 1;
+}
+.verticalLine .verticalLineTS{
+    position:absolute;
+    left: -29px;
+    top:-20px;
+    background:#ffffffaa;
+    z-index: 10;
 }
 .modules-options .mod-option fieldset legend{
     display: block;

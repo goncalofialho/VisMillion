@@ -13,6 +13,7 @@ export class Chart{
         this.yScale = options.yScale || d3.scaleLinear()
         this.timerControl
         this.connection
+        this.selfDelay = options.selfDelay || 100
         if(options.outlier){
             var outlierHeight =/* options.outlier_opts.outlierHeight ||*/ 100
             this.outlierBox = options.outlierBox || {width: this.width, height: outlierHeight}
@@ -43,6 +44,12 @@ export class Chart{
         this.fps = d3.select('#fps span')
 
         if(options.outlier){
+            if(options.outlier_opts){
+                options.outlier_opts['chart'] = this
+                if(options.outlier_opts['width'] == undefined) options.outlier_opts['chart'] = this.width
+                if(options.outlier_opts['height'] == undefined) options.outlier_opts['height'] = outlierHeight
+                if(options.outlier_opts['thresholdBottom'] == undefined) options.outlier_opts['thresholdBottom'] = this.y.domain()[1]
+            }
             let opts = options.outlier_opts ||  {
                                                     chart : this,
                                                     width : this.width,
@@ -69,6 +76,9 @@ export class Chart{
         var mouseX = d3.event.layerX || d3.event.offsetX
         var mouseY = d3.event.layerY || d3.event.offsetY
 
+        this.modules.forEach(function(el){
+            el.clearSpecificToolTips()
+        })
         if( mouseX > this.margin.left && mouseX < this.margin.left + this.width
                     && mouseY > this.margin.top &&  mouseY < this.margin.top + this.height){
 
@@ -85,6 +95,8 @@ export class Chart{
         }else{
             this.tooltip
                 .classed('open', false)
+
+
         }
 
     }
@@ -161,6 +173,7 @@ export class Chart{
 
     update(){
         var ts = new Date()
+        ts = new Date(ts - this.selfDelay)
         // update date
         var delta = new Date(ts - this.startTime)
         this.startTimeText.text(checkTime(delta.getHours() - 1) + ':' + checkTime(delta.getMinutes()) + ':' + checkTime(delta.getSeconds()))
@@ -175,6 +188,14 @@ export class Chart{
             el.update(ts)
         })
         if(this.outlier) this.outlier.update(ts)
+    }
+
+    getDeltaTime(index){
+        var delta = 0
+        for(let i = this.modules.length - 1; i >= index + 1 ; i--){
+            delta += this.modules[i].deltaRange
+        }
+        return delta
     }
 
     draw(){
@@ -225,13 +246,15 @@ export class Chart{
         })
 
         // X AXIS
-        context.textAlign = "center"
+        /*context.textAlign = "center"
         context.Baseline = "top"
 
         var translate = (this.modules[0].type == "barchart" ? this.width / this.modules.length : 0) + 30
         ticks.forEach(function(d){
             context.fillText(tickFormat(d), x(d) + translate , height + margin.top  + 10)
-        })
+        })*/
+        context.textAlign = "center"
+        context.Baseline = "top"
 
         /* X AXIS BARCHART */
         if(this.modules[0].type == "barchart"){
@@ -263,12 +286,12 @@ export class Chart{
             var tickFormat = d3.timeFormat('%H:%M:%S')
 
             context.beginPath()
-            context.moveTo(margin.left, margin.top - this.outlier.height)
-            context.lineTo(margin.left + this.width, margin.top - this.outlier.height)
-            for(let i = 0; i < ticks.length; i++){
-                context.moveTo(margin.left + x(ticks[i]), margin.top - this.outlier.height - 2)
-                context.lineTo(margin.left + x(ticks[i]), margin.top - this.outlier.height + 2)
-                context.fillText(tickFormat(ticks[i]), margin.left + x(ticks[i]), margin.top - this.outlier.height - 8)
+            /*context.moveTo(margin.left, margin.top - this.outlier.height - this.outlier.marginOutlierTop)
+            context.lineTo(margin.left + this.width, margin.top - this.outlier.height - this.outlier.marginOutlierTop)
+            */for(let i = 0; i < ticks.length; i++){
+                context.moveTo(margin.left + x(ticks[i]), margin.top - this.outlier.height - this.outlier.marginOutlierTop - 2)
+                context.lineTo(margin.left + x(ticks[i]), margin.top - this.outlier.height - this.outlier.marginOutlierTop + 2)
+                context.fillText(tickFormat(ticks[i]), margin.left + x(ticks[i]), margin.top - this.outlier.height - this.outlier.marginOutlierTop - 8)
             }
             context.strokeStyle = "black"
             context.stroke()

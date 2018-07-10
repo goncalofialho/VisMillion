@@ -5,6 +5,7 @@ export class Linechart extends Module{
         super(options)
         this.type = 'linechart'
 
+        this.deltaRange = options.deltaRange || 35000
         var endTime = new Date()
         var startTime = new Date(endTime.getTime() - this.own_width / this.chart.pixelsPerSecond * 1000)
 
@@ -24,6 +25,13 @@ export class Linechart extends Module{
         this.highBottomAreaColor = options.highBottomAreaColor || 'rgba(255, 0, 0, 0.5)'
 
         this.appendModuleOptions()
+        this.verticalLine = d3.select('body').append('div')
+                        .attr('class', 'verticalLine')
+                        .attr('id', this.type + '' + this.index)
+                        .style('height', this.chart.height + 'px')
+                        .style('top', this.chart.canvas._groups[0][0].offsetTop + this.chart.margin.top + 'px')
+        this.verticalLineTS = this.verticalLine.append('span')
+                         .attr('class', 'verticalLineTS')
     }
 
 
@@ -55,6 +63,18 @@ export class Linechart extends Module{
                     .style('top', event.pageY + 5 + 'px')
                     .style('left', event.pageX + 5 + 'px')
                     .classed('open', true)
+                this.verticalLine
+                    .style('left', event.pageX + 'px')
+                    .classed('open', true)
+
+                var others_width = 0
+                for(let i = 0; i < this.index; i++){
+                    others_width += this.chart.modules[i].own_width
+                }
+                var timestamp = this.x.invert(x - others_width - this.chart.margin.left)
+
+                this.verticalLineTS
+                    .text(transformDate(timestamp))
 
                 notFound = false
                 break
@@ -65,9 +85,14 @@ export class Linechart extends Module{
         if( notFound ){
             tooltip
                 .classed('open', false)
+            this.verticalLine
+                .classed('open', false)
         }
     }
-
+    clearSpecificToolTips(){
+        this.verticalLine
+            .classed('open', false)
+    }
 
     appendModuleOptions(){
         var options = {
@@ -187,16 +212,24 @@ export class Linechart extends Module{
     update(ts){
         this.own_width = this.chart.width / this.chart.modules.length
         this.x1 =  this.own_width * this.index
-        var endTime = new Date(ts - ((this.own_width / this.chart.pixelsPerSecond * 1000) * ((this.chart.modules.length - 1) - this.index) ))
-        var startTime = new Date(endTime.getTime() - this.own_width / this.chart.pixelsPerSecond * 1000)
+        //var endTime = new Date(ts - ((this.own_width / this.chart.pixelsPerSecond * 1000) * ((this.chart.modules.length - 1) - this.index) ))
+        //var startTime = new Date(endTime.getTime() - this.own_width / this.chart.pixelsPerSecond * 1000)
+        var endTime = new Date(ts - this.chart.getDeltaTime(this.index))
+        var startTime = new Date(endTime.getTime() - this.deltaRange )
 
         // GENERATING AREA CHART
         var timeInterval = this.x.domain()
         var steps = this.boxPlotSteps
         var scale = d3.scaleTime().domain(timeInterval).range([0, steps])
         var delta = scale.invert(1).getTime() - scale.invert(0).getTime()
-        var graphsInFront = 3
+        var graphsInFront
+        if(this.chart.modules[this.index + 1] == undefined){
+            graphsInFront = 0
+        }else{
+            graphsInFront = 3
+        }
         this.data = this.chart.filterData(startTime, new Date(endTime.getTime() + (delta * 3)))
+        //TODO: QUANDO O LINECHART É O MAIS A DIREITA NAO ESTA A DESENHAR PORQUE NAO HA PONTOS NO FUTURO!!! TIRAR GRAPHS IN FRONT, RESOLVER SALTO
 
         // UPDATE DOMAINS
         this.x = d3.scaleTime().range([0, this.own_width])
@@ -241,7 +274,7 @@ export class Linechart extends Module{
             }
         }
 
-        if(this.chart.modules[this.index + 1].type == 'scatterchart' && this.chart.modules[this.index + 1].flow != 'high'){
+        if(this.chart.modules[this.index + 1] != undefined && this.chart.modules[this.index + 1].type == 'scatterchart' && this.chart.modules[this.index + 1].flow != 'high'){
             this.dotsOptions = {
                     color : this.chart.modules[this.index + 1].dotsColor,
                     r     : this.chart.modules[this.index + 1].dotsRadius,
@@ -250,7 +283,7 @@ export class Linechart extends Module{
             this.dots = this.chart.filterData(new Date(endTime.getTime() - (delta * graphsInFront)),endTime)
             this.dots = this.dots.filter( el => el.data <= this.chart.y.domain()[1])
         }
-        if( this.chart.modules[this.index + 1].flow == 'high'){
+        if(this.chart.modules[this.index + 1] != undefined && this.chart.modules[this.index + 1].flow == 'high'){
             this.dots = []
         }
 
@@ -267,13 +300,13 @@ export class Linechart extends Module{
         context.stroke()
         context.closePath()
 
-        if(this.dots.length > 0 && this.chart.modules[this.index + 1].type == 'scatterchart'){
+        if(this.chart.modules[this.index + 1] != undefined && this.dots.length > 0 && this.chart.modules[this.index + 1].type == 'scatterchart'){
             var color = 'red' //this.dotsOptions.color
             var r = this.dotsOptions.r
-
             this.dots.forEach(function(el){
                 // CAREFULL WITH THE
-                let cx = parent.chart.margin.left + parent.chart.modules[parent.index + 1].x1 + parent.chart.modules[parent.index + 1].x(el.ts)
+                //let cx = parent.chart.margin.left + parent.chart.modules[parent.index + 1].x1 + parent.chart.modules[parent.index + 1].x(el.ts)
+                let cx = parent.chart.margin.left + parent.chart.modules[parent.index ].x1 + parent.x(el.ts)
                 let cy = parent.chart.margin.top + parent.chart.modules[parent.index + 1].y(el.data)
                 let color = parent.dotsOptions.vanish(el.ts)
                 context.beginPath()
@@ -286,7 +319,15 @@ export class Linechart extends Module{
         }
         if(this.flow == 'low'){
             var lineGenerator = d3.line()
-                    .x(function(d){ return parent.chart.margin.left + parent.x1 + parent.x(d.ts); })
+                    .x(function(d){
+                        if(parent.x(d.ts) < 0){
+                            return parent.x1 + parent.chart.margin.left
+                        }else if (parent.x(d.ts) > parent.own_width){
+                            return parent.x1 + parent.chart.margin.left + parent.own_width
+                        }else{
+                            return parent.chart.margin.left + parent.x1 + parent.x(d.ts)
+                        }
+                    })
                     .y(function(d){ return parent.chart.margin.top + parent.y(d.data); })
                     .curve(d3.curveBasis)
                       .context(context)
@@ -366,6 +407,15 @@ export class Linechart extends Module{
             context.stroke()
             context.lineWidth = 1
             context.closePath()
+
+
         }
+        // X AXIS
+        context.beginPath()
+        context.fillStyle = 'black'
+        context.textAlign = 'center'
+        context.BaseLine = 'bottom'
+        context.fillText(transformDate(this.x.domain()[1]), this.chart.margin.left + this.own_width + this.x1 , this.chart.margin.top + this.chart.height + 10)
+        context.closePath()
     }
 }

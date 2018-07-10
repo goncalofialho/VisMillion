@@ -2,7 +2,8 @@
 export class Outlier{
     constructor(options){
         this.chart = options.chart
-        this.height = options.height
+        this.marginOutlierTop = options.marginOutlierTop || 30
+        this.height = options.height - this.marginOutlierTop
         this.width = options.width
         this.data = []
         this.thresholdTop = options.thresholdBottom * 2
@@ -18,11 +19,11 @@ export class Outlier{
 
     mouseEvent(x, y, tooltip, event){
         var notFound = true
-
+        // TODO: SOMETHING NOT WORKING HERE
         for( let i = 0; i < this.data.length; i++){
             let el = this.data[i]
             let xBox = (this.chart.margin.left + this.chart.x(el.ts)) - this.radius
-            let yBox = (this.chart.margin.top - this.height + this.y(el.data)) - this.radius
+            let yBox = (this.chart.margin.top - this.height - this.marginOutlierTop + this.y(el.data)) - this.radius
             let width = this.radius * 2
             let height = this.radius * 2
             if(insideBox({x:x, y:y},{x:xBox, y:yBox, width: width, height: height})){
@@ -90,7 +91,7 @@ export class Outlier{
             let el = this.data[i]
             let cx = parent.chart.margin.left  + parent.chart.x(el.ts)
             if (cx < parent.chart.margin.left) continue
-            let cy = parent.chart.margin.top - this.height + this.y(el.data)
+            let cy = parent.chart.margin.top - this.height - this.marginOutlierTop  + this.y(el.data)
             context.beginPath()
             context.fillStyle = color
             context.arc(cx, cy, r, 0, 2 * Math.PI, false)
@@ -98,11 +99,11 @@ export class Outlier{
             context.closePath()
         }
 
-     /*   context.beginPath()
+        context.beginPath()
         context.strokeStyle = 'black'
-        context.rect(x, y, width, height)
+        context.rect(x, y - this.marginOutlierTop , width, height)
         context.stroke()
-        context.closePath()*/
+        context.closePath()
         //console.log('drawing')
     }
 }

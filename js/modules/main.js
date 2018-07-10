@@ -14,16 +14,17 @@ $(document).ready(function(){
     obj = new Chart({
         width: $('.container').width() ,
         height: 400,
-        margin: {top: 30, right: 40, left: 40, bottom: 20},
+        margin: {top: 30, right: 40, left: 40, bottom: 25},
         transitions: 300,
         pixelsPerSecond: 10,
         bgColor: '#ffffff',
         xDomain: [0,100],
         yDomain: [1e-6,100],
         yScale: d3.scaleLog(),
+        selfDelay: 1000,
         container: d3.select('.bigvis'),
-        outlier: true
-       /* outlier_opts : {
+        outlier: true/*,
+        outlier_opts : {
             outlierHeight : 100,
 
         }*/
@@ -44,7 +45,8 @@ $(document).ready(function(){
         chart : obj,
         index : obj.modules.length,
         flow  : 'high',
-        boxPlotSteps : 30
+        boxPlotSteps : 30,
+        deltaRange: 30000
     })
 
     var module2 = new Scatterchart({
@@ -56,7 +58,8 @@ $(document).ready(function(){
         squareColor : 'orange',
         squareDensity : 50,
         squareDensityRange : [0, 300],
-        maxFlowDrawDots : 900
+        maxDotsFlow : 3000,
+        deltaRange : 15000
     })
 
     //CONNECTION

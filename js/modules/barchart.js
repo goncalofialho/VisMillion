@@ -79,6 +79,8 @@ export class Barchart extends Module{
         }
     }
 
+    clearSpecificToolTips(){}
+
 
     appendModuleOptions(){
         var options = {
@@ -134,7 +136,8 @@ export class Barchart extends Module{
     update(ts){
         this.own_width = this.chart.width / this.chart.modules.length
         this.x1 =  this.own_width * this.index
-        var endTime = new Date(ts - ((this.own_width / this.chart.pixelsPerSecond * 1000) * ((this.chart.modules.length - 1) - this.index) ))
+        //var endTime = new Date(ts - ((this.own_width / this.chart.pixelsPerSecond * 1000) * ((this.chart.modules.length - 1) - this.index) ))
+        var endTime = new Date(ts - this.chart.getDeltaTime(this.index))
         var startTime = new Date(endTime.getTime() - this.own_width / this.chart.pixelsPerSecond * 1000)
 
         this.data = this.chart.filterData(this.lastEndTime, endTime)
@@ -184,6 +187,7 @@ export class Barchart extends Module{
 
         this.x.range([0, this.own_width])
         this.xScatter = d3.scaleTime().range([0, this.own_width])
+        // TODO: THIS IS NOT WORKING FOR NOW
         this.xScatter.domain([startTime, endTime])
         this.y.domain(this.chart.y.domain())
     }
@@ -235,5 +239,13 @@ export class Barchart extends Module{
             context.stroke()
             context.closePath()
         }
+
+        // X AXIS
+        context.beginPath()
+        context.fillStyle = 'black'
+        context.textAlign = 'center'
+        context.BaseLine = 'bottom'
+        context.fillText(transformDate(this.xScatter.domain()[1]), this.chart.margin.left + this.own_width + this.x1 , this.chart.margin.top + this.chart.height + 10)
+        context.closePath()
     }
 }

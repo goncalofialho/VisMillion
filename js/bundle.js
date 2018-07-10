@@ -2,7 +2,8 @@
 class Outlier{
     constructor(options){
         this.chart = options.chart;
-        this.height = options.height;
+        this.marginOutlierTop = options.marginOutlierTop || 30;
+        this.height = options.height - this.marginOutlierTop;
         this.width = options.width;
         this.data = [];
         this.thresholdTop = options.thresholdBottom * 2;
@@ -18,11 +19,11 @@ class Outlier{
 
     mouseEvent(x, y, tooltip, event){
         var notFound = true;
-
+        // TODO: SOMETHING NOT WORKING HERE
         for( let i = 0; i < this.data.length; i++){
             let el = this.data[i];
             let xBox = (this.chart.margin.left + this.chart.x(el.ts)) - this.radius;
-            let yBox = (this.chart.margin.top - this.height + this.y(el.data)) - this.radius;
+            let yBox = (this.chart.margin.top - this.height - this.marginOutlierTop + this.y(el.data)) - this.radius;
             let width = this.radius * 2;
             let height = this.radius * 2;
             if(insideBox({x:x, y:y},{x:xBox, y:yBox, width: width, height: height})){
@@ -90,7 +91,7 @@ class Outlier{
             let el = this.data[i];
             let cx = parent.chart.margin.left  + parent.chart.x(el.ts);
             if (cx < parent.chart.margin.left) continue
-            let cy = parent.chart.margin.top - this.height + this.y(el.data);
+            let cy = parent.chart.margin.top - this.height - this.marginOutlierTop  + this.y(el.data);
             context.beginPath();
             context.fillStyle = color;
             context.arc(cx, cy, r, 0, 2 * Math.PI, false);
@@ -98,11 +99,11 @@ class Outlier{
             context.closePath();
         }
 
-     /*   context.beginPath()
-        context.strokeStyle = 'black'
-        context.rect(x, y, width, height)
-        context.stroke()
-        context.closePath()*/
+        context.beginPath();
+        context.strokeStyle = 'black';
+        context.rect(x, y - this.marginOutlierTop , width, height);
+        context.stroke();
+        context.closePath();
         //console.log('drawing')
     }
 }
@@ -119,6 +120,7 @@ class Chart{
         this.yScale = options.yScale || d3.scaleLinear();
         this.timerControl;
         this.connection;
+        this.selfDelay = options.selfDelay || 100;
         if(options.outlier){
             var outlierHeight =/* options.outlier_opts.outlierHeight ||*/ 100;
             this.outlierBox = options.outlierBox || {width: this.width, height: outlierHeight};
@@ -149,6 +151,12 @@ class Chart{
         this.fps = d3.select('#fps span');
 
         if(options.outlier){
+            if(options.outlier_opts){
+                options.outlier_opts['chart'] = this;
+                if(options.outlier_opts['width'] == undefined) options.outlier_opts['chart'] = this.width;
+                if(options.outlier_opts['height'] == undefined) options.outlier_opts['height'] = outlierHeight;
+                if(options.outlier_opts['thresholdBottom'] == undefined) options.outlier_opts['thresholdBottom'] = this.y.domain()[1];
+            }
             let opts = options.outlier_opts ||  {
                                                     chart : this,
                                                     width : this.width,
@@ -175,6 +183,9 @@ class Chart{
         var mouseX = d3.event.layerX || d3.event.offsetX;
         var mouseY = d3.event.layerY || d3.event.offsetY;
 
+        this.modules.forEach(function(el){
+            el.clearSpecificToolTips();
+        });
         if( mouseX > this.margin.left && mouseX < this.margin.left + this.width
                     && mouseY > this.margin.top &&  mouseY < this.margin.top + this.height){
 
@@ -191,6 +202,8 @@ class Chart{
         }else{
             this.tooltip
                 .classed('open', false);
+
+
         }
 
     }
@@ -267,6 +280,7 @@ class Chart{
 
     update(){
         var ts = new Date();
+        ts = new Date(ts - this.selfDelay);
         // update date
         var delta = new Date(ts - this.startTime);
         this.startTimeText.text(checkTime(delta.getHours() - 1) + ':' + checkTime(delta.getMinutes()) + ':' + checkTime(delta.getSeconds()));
@@ -281,6 +295,14 @@ class Chart{
             el.update(ts);
         });
         if(this.outlier) this.outlier.update(ts);
+    }
+
+    getDeltaTime(index){
+        var delta = 0;
+        for(let i = this.modules.length - 1; i >= index + 1 ; i--){
+            delta += this.modules[i].deltaRange;
+        }
+        return delta
     }
 
     draw(){
@@ -330,13 +352,15 @@ class Chart{
         });
 
         // X AXIS
+        /*context.textAlign = "center"
+        context.Baseline = "top"
+
+        var translate = (this.modules[0].type == "barchart" ? this.width / this.modules.length : 0) + 30
+        ticks.forEach(function(d){
+            context.fillText(tickFormat(d), x(d) + translate , height + margin.top  + 10)
+        })*/
         context.textAlign = "center";
         context.Baseline = "top";
-
-        var translate = (this.modules[0].type == "barchart" ? this.width / this.modules.length : 0) + 30;
-        ticks.forEach(function(d){
-            context.fillText(tickFormat(d), x(d) + translate , height + margin.top  + 10);
-        });
 
         /* X AXIS BARCHART */
         if(this.modules[0].type == "barchart"){
@@ -368,12 +392,12 @@ class Chart{
             var tickFormat = d3.timeFormat('%H:%M:%S');
 
             context.beginPath();
-            context.moveTo(margin.left, margin.top - this.outlier.height);
-            context.lineTo(margin.left + this.width, margin.top - this.outlier.height);
-            for(let i = 0; i < ticks.length; i++){
-                context.moveTo(margin.left + x(ticks[i]), margin.top - this.outlier.height - 2);
-                context.lineTo(margin.left + x(ticks[i]), margin.top - this.outlier.height + 2);
-                context.fillText(tickFormat(ticks[i]), margin.left + x(ticks[i]), margin.top - this.outlier.height - 8);
+            /*context.moveTo(margin.left, margin.top - this.outlier.height - this.outlier.marginOutlierTop)
+            context.lineTo(margin.left + this.width, margin.top - this.outlier.height - this.outlier.marginOutlierTop)
+            */for(let i = 0; i < ticks.length; i++){
+                context.moveTo(margin.left + x(ticks[i]), margin.top - this.outlier.height - this.outlier.marginOutlierTop - 2);
+                context.lineTo(margin.left + x(ticks[i]), margin.top - this.outlier.height - this.outlier.marginOutlierTop + 2);
+                context.fillText(tickFormat(ticks[i]), margin.left + x(ticks[i]), margin.top - this.outlier.height - this.outlier.marginOutlierTop - 8);
             }
             context.strokeStyle = "black";
             context.stroke();
@@ -474,6 +498,7 @@ class Linechart extends Module{
         super(options);
         this.type = 'linechart';
 
+        this.deltaRange = options.deltaRange || 35000;
         var endTime = new Date();
         var startTime = new Date(endTime.getTime() - this.own_width / this.chart.pixelsPerSecond * 1000);
 
@@ -493,6 +518,13 @@ class Linechart extends Module{
         this.highBottomAreaColor = options.highBottomAreaColor || 'rgba(255, 0, 0, 0.5)';
 
         this.appendModuleOptions();
+        this.verticalLine = d3.select('body').append('div')
+                        .attr('class', 'verticalLine')
+                        .attr('id', this.type + '' + this.index)
+                        .style('height', this.chart.height + 'px')
+                        .style('top', this.chart.canvas._groups[0][0].offsetTop + this.chart.margin.top + 'px');
+        this.verticalLineTS = this.verticalLine.append('span')
+                         .attr('class', 'verticalLineTS');
     }
 
 
@@ -523,6 +555,18 @@ class Linechart extends Module{
                     .style('top', event.pageY + 5 + 'px')
                     .style('left', event.pageX + 5 + 'px')
                     .classed('open', true);
+                this.verticalLine
+                    .style('left', event.pageX + 'px')
+                    .classed('open', true);
+
+                var others_width = 0;
+                for(let i = 0; i < this.index; i++){
+                    others_width += this.chart.modules[i].own_width;
+                }
+                var timestamp = this.x.invert(x - others_width - this.chart.margin.left);
+
+                this.verticalLineTS
+                    .text(transformDate(timestamp));
 
                 notFound = false;
                 break
@@ -533,9 +577,14 @@ class Linechart extends Module{
         if( notFound ){
             tooltip
                 .classed('open', false);
+            this.verticalLine
+                .classed('open', false);
         }
     }
-
+    clearSpecificToolTips(){
+        this.verticalLine
+            .classed('open', false);
+    }
 
     appendModuleOptions(){
         var options = {
@@ -655,16 +704,24 @@ class Linechart extends Module{
     update(ts){
         this.own_width = this.chart.width / this.chart.modules.length;
         this.x1 =  this.own_width * this.index;
-        var endTime = new Date(ts - ((this.own_width / this.chart.pixelsPerSecond * 1000) * ((this.chart.modules.length - 1) - this.index) ));
-        var startTime = new Date(endTime.getTime() - this.own_width / this.chart.pixelsPerSecond * 1000);
+        //var endTime = new Date(ts - ((this.own_width / this.chart.pixelsPerSecond * 1000) * ((this.chart.modules.length - 1) - this.index) ))
+        //var startTime = new Date(endTime.getTime() - this.own_width / this.chart.pixelsPerSecond * 1000)
+        var endTime = new Date(ts - this.chart.getDeltaTime(this.index));
+        var startTime = new Date(endTime.getTime() - this.deltaRange );
 
         // GENERATING AREA CHART
         var timeInterval = this.x.domain();
         var steps = this.boxPlotSteps;
         var scale = d3.scaleTime().domain(timeInterval).range([0, steps]);
         var delta = scale.invert(1).getTime() - scale.invert(0).getTime();
-        var graphsInFront = 3;
+        var graphsInFront;
+        if(this.chart.modules[this.index + 1] == undefined){
+            graphsInFront = 0;
+        }else{
+            graphsInFront = 3;
+        }
         this.data = this.chart.filterData(startTime, new Date(endTime.getTime() + (delta * 3)));
+        //TODO: QUANDO O LINECHART É O MAIS A DIREITA NAO ESTA A DESENHAR PORQUE NAO HA PONTOS NO FUTURO!!! TIRAR GRAPHS IN FRONT, RESOLVER SALTO
 
         // UPDATE DOMAINS
         this.x = d3.scaleTime().range([0, this.own_width]);
@@ -709,7 +766,7 @@ class Linechart extends Module{
             }
         }
 
-        if(this.chart.modules[this.index + 1].type == 'scatterchart' && this.chart.modules[this.index + 1].flow != 'high'){
+        if(this.chart.modules[this.index + 1] != undefined && this.chart.modules[this.index + 1].type == 'scatterchart' && this.chart.modules[this.index + 1].flow != 'high'){
             this.dotsOptions = {
                     color : this.chart.modules[this.index + 1].dotsColor,
                     r     : this.chart.modules[this.index + 1].dotsRadius,
@@ -718,7 +775,7 @@ class Linechart extends Module{
             this.dots = this.chart.filterData(new Date(endTime.getTime() - (delta * graphsInFront)),endTime);
             this.dots = this.dots.filter( el => el.data <= this.chart.y.domain()[1]);
         }
-        if( this.chart.modules[this.index + 1].flow == 'high'){
+        if(this.chart.modules[this.index + 1] != undefined && this.chart.modules[this.index + 1].flow == 'high'){
             this.dots = [];
         }
 
@@ -735,12 +792,12 @@ class Linechart extends Module{
         context.stroke();
         context.closePath();
 
-        if(this.dots.length > 0 && this.chart.modules[this.index + 1].type == 'scatterchart'){
+        if(this.chart.modules[this.index + 1] != undefined && this.dots.length > 0 && this.chart.modules[this.index + 1].type == 'scatterchart'){
             var r = this.dotsOptions.r;
-
             this.dots.forEach(function(el){
                 // CAREFULL WITH THE
-                let cx = parent.chart.margin.left + parent.chart.modules[parent.index + 1].x1 + parent.chart.modules[parent.index + 1].x(el.ts);
+                //let cx = parent.chart.margin.left + parent.chart.modules[parent.index + 1].x1 + parent.chart.modules[parent.index + 1].x(el.ts)
+                let cx = parent.chart.margin.left + parent.chart.modules[parent.index ].x1 + parent.x(el.ts);
                 let cy = parent.chart.margin.top + parent.chart.modules[parent.index + 1].y(el.data);
                 let color = parent.dotsOptions.vanish(el.ts);
                 context.beginPath();
@@ -753,7 +810,15 @@ class Linechart extends Module{
         }
         if(this.flow == 'low'){
             var lineGenerator = d3.line()
-                    .x(function(d){ return parent.chart.margin.left + parent.x1 + parent.x(d.ts); })
+                    .x(function(d){
+                        if(parent.x(d.ts) < 0){
+                            return parent.x1 + parent.chart.margin.left
+                        }else if (parent.x(d.ts) > parent.own_width){
+                            return parent.x1 + parent.chart.margin.left + parent.own_width
+                        }else{
+                            return parent.chart.margin.left + parent.x1 + parent.x(d.ts)
+                        }
+                    })
                     .y(function(d){ return parent.chart.margin.top + parent.y(d.data); })
                     .curve(d3.curveBasis)
                       .context(context);
@@ -833,7 +898,16 @@ class Linechart extends Module{
             context.stroke();
             context.lineWidth = 1;
             context.closePath();
+
+
         }
+        // X AXIS
+        context.beginPath();
+        context.fillStyle = 'black';
+        context.textAlign = 'center';
+        context.BaseLine = 'bottom';
+        context.fillText(transformDate(this.x.domain()[1]), this.chart.margin.left + this.own_width + this.x1 , this.chart.margin.top + this.chart.height + 10);
+        context.closePath();
     }
 }
 
@@ -841,7 +915,7 @@ class Scatterchart extends Module{
     constructor(options){
         super(options);
         this.type = 'scatterchart';
-
+        this.deltaRange = options.deltaRange || 35000;
         var endTime = new Date();
         var startTime = new Date(endTime.getTime() - this.own_width / this.chart.pixelsPerSecond * 1000);
 
@@ -851,7 +925,8 @@ class Scatterchart extends Module{
 
         this.dotsColor = options.dotsColor || 'orange';
         this.dotsRadius = options.dotsRadius || 5;
-        this.maxFlowDrawDots = options.maxFlowDrawDots || 999;
+        this.maxFlowDrawDots = options.maxFlowDrawDots || 120;
+        this.maxDotsFlow = options.maxDotsFlow || 3000;
         this.lowFlow = true;
 
         this.squareLength = options.squareLength || 15;
@@ -864,6 +939,13 @@ class Scatterchart extends Module{
         this.appendModuleOptions();
         this.flow = options.flow || 'both';
         this.deltaXScale = options.deltaXScale || null;
+        this.verticalLine = d3.select('body').append('div')
+                        .attr('class', 'verticalLine')
+                        .attr('id', this.type + '' + this.index)
+                        .style('height', this.chart.height + 'px')
+                        .style('top', this.chart.canvas._groups[0][0].offsetTop + this.chart.margin.top + 'px');
+        this.verticalLineTS = this.verticalLine.append('span')
+                         .attr('class', 'verticalLineTS');
     }
 
 
@@ -897,6 +979,19 @@ class Scatterchart extends Module{
                         .style('left', event.pageX + 5 + 'px')
                         .classed('open', true);
 
+                    this.verticalLine
+                        .style('left', event.pageX + 'px')
+                        .classed('open', true);
+
+                    var others_width = 0;
+                    for(let i = 0; i < this.index; i++){
+                        others_width += this.chart.modules[i].own_width;
+                    }
+                    var timestamp = this.x.invert(x - others_width - this.chart.margin.left);
+
+                    this.verticalLineTS
+                        .text(transformDate(timestamp));
+
                     notFound = false;
                     break loopBoxes
                 }
@@ -906,9 +1001,14 @@ class Scatterchart extends Module{
         if( notFound ){
             tooltip
                 .classed('open', false);
+            this.verticalLine
+                .classed('open', false);
         }
     }
-
+    clearSpecificToolTips(){
+        this.verticalLine
+            .classed('open', false);
+    }
 
     appendModuleOptions(){
         var options = {
@@ -1018,8 +1118,11 @@ class Scatterchart extends Module{
         this.own_width = this.chart.width / this.chart.modules.length;
         this.x1 =  this.own_width * this.index;
 
-        var endTime = new Date(ts - ((this.own_width / this.chart.pixelsPerSecond * 1000) * ((this.chart.modules.length - 1) - this.index) ));
-        var startTime = new Date(endTime.getTime() - this.own_width / this.chart.pixelsPerSecond * 1000);
+//        var endTime = new Date(ts - ((this.own_width / this.chart.pixelsPerSecond * 1000) * ((this.chart.modules.length - 1) - this.index) ))
+//        var startTime = new Date(endTime.getTime() - this.own_width / this.chart.pixelsPerSecond * 1000)
+        var endTime = new Date(ts - this.chart.getDeltaTime(this.index));
+        var startTime = new Date(endTime.getTime() - this.deltaRange );
+
         this.deltaTimeX = endTime - startTime;
 
         this.data = this.chart.filterData(startTime, endTime);
@@ -1079,8 +1182,29 @@ class Scatterchart extends Module{
         });
 
         // Should I draw the Dots ?
-        this.lowFlow = this.chart.connection.flowPerSecond < this.maxFlowDrawDots ? true : false;
-
+        /*if(this.chart.connection.flowPerSecond > this.maxFlowDrawDots){
+            this.flow = 'high'
+            $('#'+this.index+'radio-3').prop('checked', true)
+        }*/
+        /*var previousModule = 0
+        if(this.chart.modules[this.index - 1].type == 'linechart'){
+            previousModule = this.chart.modules[this.index - 1].dots.length
+        }*/
+        if(this.data.length > this.maxDotsFlow && this.flow != 'high'){
+            this.flow = 'high';
+            $('#'+this.index+'radio-3').prop('checked', true);
+            $('#'+this.index+'radio-1').prop('disabled', true);
+            $('#'+this.index+'radio-2').prop('disabled', true);
+        }else if(this.data.length <= this.maxDotsFlow && this.flow == 'high'){
+            $('#'+this.index+'radio-1').prop('disabled', false);
+            $('#'+this.index+'radio-2').prop('disabled', false);
+            this.flow = 'both';
+            $('#'+this.index+'radio-2').prop('checked', true);
+        }
+        /*if(parseInt(this.chart.fps.text()) < 30){
+            //this.chart.pause()
+            console.log(this.data.length)
+        }*/
     }
 
 
@@ -1107,32 +1231,39 @@ class Scatterchart extends Module{
           //context.closePath()
         }
         if(this.flow == 'both' || this.flow == 'high'){
+            // High Flow
+            for(let i = 0; i < this.scatterBoxes.length; i++){
+                let x = parent.x1 + parent.chart.margin.left + parent.x(this.scatterBoxes[i].ts);
+                let width = this.squareLength;
+                let height = this.squareLength;
 
-        // High Flow
-        for(let i = 0; i < this.scatterBoxes.length; i++){
-            let x = parent.x1 + parent.chart.margin.left + parent.x(this.scatterBoxes[i].ts);
-            let width = this.squareLength;
-            let height = this.squareLength;
+                if( x + width > parent.x1 + parent.chart.margin.left + parent.own_width ){
+                    width = (parent.x1 + parent.chart.margin.left + parent.own_width) - x;
+                }else if( x < parent.x1 + parent.chart.margin.left ){
+                    width = width + parent.x(this.scatterBoxes[i].ts);
+                    x = parent.x1 + parent.chart.margin.left;
+                }
 
-            if( x + width > parent.x1 + parent.chart.margin.left + parent.own_width ){
-                width = (parent.x1 + parent.chart.margin.left + parent.own_width) - x;
-            }else if( x < parent.x1 + parent.chart.margin.left ){
-                width = width + parent.x(this.scatterBoxes[i].ts);
-                x = parent.x1 + parent.chart.margin.left;
-            }
+                for(let j = 0; j < this.scatterBoxes[i].vals.length; j++){
+                    let y = parent.chart.margin.top + (j * this.squareLength);
+                    let color = this.scaleColor(this.scatterBoxes[i].vals[j]);
 
-            for(let j = 0; j < this.scatterBoxes[i].vals.length; j++){
-                let y = parent.chart.margin.top + (j * this.squareLength);
-                let color = this.scaleColor(this.scatterBoxes[i].vals[j]);
-
-                context.beginPath();
-                context.rect(x, y, width, height);
-                context.fillStyle = color;
-                context.fill();
-                context.closePath();
+                    context.beginPath();
+                    context.rect(x, y, width, height);
+                    context.fillStyle = color;
+                    context.fill();
+                    context.closePath();
+                }
             }
         }
-        }
+
+        // X AXIS
+        context.beginPath();
+        context.fillStyle = 'black';
+        context.textAlign = 'center';
+        context.BaseLine = 'bottom';
+        context.fillText(transformDate(this.x.domain()[1]), this.chart.margin.left + this.own_width + this.x1 , this.chart.margin.top + this.chart.height + 10);
+        context.closePath();
     }
 }
 
@@ -1215,6 +1346,8 @@ class Barchart extends Module{
         }
     }
 
+    clearSpecificToolTips(){}
+
 
     appendModuleOptions(){
         var options = {
@@ -1270,7 +1403,8 @@ class Barchart extends Module{
     update(ts){
         this.own_width = this.chart.width / this.chart.modules.length;
         this.x1 =  this.own_width * this.index;
-        var endTime = new Date(ts - ((this.own_width / this.chart.pixelsPerSecond * 1000) * ((this.chart.modules.length - 1) - this.index) ));
+        //var endTime = new Date(ts - ((this.own_width / this.chart.pixelsPerSecond * 1000) * ((this.chart.modules.length - 1) - this.index) ))
+        var endTime = new Date(ts - this.chart.getDeltaTime(this.index));
         var startTime = new Date(endTime.getTime() - this.own_width / this.chart.pixelsPerSecond * 1000);
 
         this.data = this.chart.filterData(this.lastEndTime, endTime);
@@ -1320,6 +1454,7 @@ class Barchart extends Module{
 
         this.x.range([0, this.own_width]);
         this.xScatter = d3.scaleTime().range([0, this.own_width]);
+        // TODO: THIS IS NOT WORKING FOR NOW
         this.xScatter.domain([startTime, endTime]);
         this.y.domain(this.chart.y.domain());
     }
@@ -1371,6 +1506,14 @@ class Barchart extends Module{
             context.stroke();
             context.closePath();
         }
+
+        // X AXIS
+        context.beginPath();
+        context.fillStyle = 'black';
+        context.textAlign = 'center';
+        context.BaseLine = 'bottom';
+        context.fillText(transformDate(this.xScatter.domain()[1]), this.chart.margin.left + this.own_width + this.x1 , this.chart.margin.top + this.chart.height + 10);
+        context.closePath();
     }
 }
 
@@ -1423,12 +1566,19 @@ class Connection{
         this.socket = io.connect('http://' + this.host + ':' + this.port);
 
         this.socket.on('message', function(data){
-            let now = new Date();
+            var now;
+            if(data['ts'] != undefined){
+                now = new Date(data['ts'] * 1000);
+            }else{
+                now = new Date();
+            }
             chart.data.push({
                 ts: now.getTime(),
-                data: data
+                data: data['val']
             });
+
             packs += 1;
+            if (packs % 1000 == 0) console.log('1000 packs: ' + transformDate(now));
             $('#package-count p:first-child i').text(packs);
         });
         var connection = this;
@@ -1461,16 +1611,17 @@ $(document).ready(function(){
     obj = new Chart({
         width: $('.container').width() ,
         height: 400,
-        margin: {top: 30, right: 40, left: 40, bottom: 20},
+        margin: {top: 30, right: 40, left: 40, bottom: 25},
         transitions: 300,
         pixelsPerSecond: 10,
         bgColor: '#ffffff',
         xDomain: [0,100],
         yDomain: [1e-6,100],
         yScale: d3.scaleLog(),
+        selfDelay: 1000,
         container: d3.select('.bigvis'),
-        outlier: true
-       /* outlier_opts : {
+        outlier: true/*,
+        outlier_opts : {
             outlierHeight : 100,
 
         }*/
@@ -1491,7 +1642,8 @@ $(document).ready(function(){
         chart : obj,
         index : obj.modules.length,
         flow  : 'high',
-        boxPlotSteps : 30
+        boxPlotSteps : 30,
+        deltaRange: 30000
     });
 
     var module2 = new Scatterchart({
@@ -1503,7 +1655,8 @@ $(document).ready(function(){
         squareColor : 'orange',
         squareDensity : 50,
         squareDensityRange : [0, 300],
-        maxFlowDrawDots : 900
+        maxDotsFlow : 3000,
+        deltaRange : 15000
     });
 
     //CONNECTION

@@ -1,14 +1,12 @@
-from flask import Flask, render_template
+from flask import Flask
 from flask_socketio import SocketIO, emit
 from time import sleep
 from threading import Thread
 import threading
-#from faker import Faker
-from random import randint
 import pandas as pd
+import time
+from dateutil import tz
 import datetime
-import random
-import numpy as np
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'secret!'
@@ -21,12 +19,12 @@ csvfile = csvfile.sort_values(by=column_timestamp)
 column = 'Trip Seconds'
 maximum = len(csvfile.index)
 """
-csvfile = pd.read_csv('datasets/blockchainBTC2017-12-17.csv', encoding='utf-8')
-column_timestamp = 'timestamp'
+csvfile = pd.read_csv('usability_tests1.csv', encoding='utf-8')
+column_timestamp = 'delta'
 #csvfile = csvfile.sort_values(by=column_timestamp)
 column = 'trans_satoshis'
 maximum = len(csvfile.index)
-start_at = 59000
+start_at = 0
 
 class CountThread(Thread):
     """Stream data on Thread"""
@@ -44,9 +42,11 @@ class CountThread(Thread):
             with self.pause_cond:
                 while self.paused:
                     self.pause_cond.wait()
-                val = csvfile.iloc[count][column]
+                item = csvfile.iloc[count]
+                val = item['trans_satoshis']
                 if not str(val) == 'nan':
-                    socketio.send(float(val))
+                    #socketio.send({'val': float(val), 'ts': int(time.mktime(datetime.datetime.utcnow().timetuple())) * 1000})
+                    socketio.send({'val': float(val), 'ts': datetime.datetime.now().timestamp()})
                 else:
                     print("NaN found at " + str(count))
 
@@ -56,8 +56,8 @@ class CountThread(Thread):
                 count += 1
                 if count >= maximum:
                     exit()
-            #sleep(delta)
-            sleep(self.getDelay())
+            sleep(item['delta'] / 1000)
+            #sleep(self.getDelay())
 
     def getDelay(self):
         return self.delay

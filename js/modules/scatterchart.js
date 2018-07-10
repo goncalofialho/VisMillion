@@ -4,7 +4,7 @@ export class Scatterchart extends Module{
     constructor(options){
         super(options)
         this.type = 'scatterchart'
-
+        this.deltaRange = options.deltaRange || 35000
         var endTime = new Date()
         var startTime = new Date(endTime.getTime() - this.own_width / this.chart.pixelsPerSecond * 1000)
 
@@ -14,7 +14,8 @@ export class Scatterchart extends Module{
 
         this.dotsColor = options.dotsColor || 'orange'
         this.dotsRadius = options.dotsRadius || 5
-        this.maxFlowDrawDots = options.maxFlowDrawDots || 999
+        this.maxFlowDrawDots = options.maxFlowDrawDots || 120
+        this.maxDotsFlow = options.maxDotsFlow || 3000
         this.lowFlow = true
 
         this.squareLength = options.squareLength || 15
@@ -27,6 +28,13 @@ export class Scatterchart extends Module{
         this.appendModuleOptions()
         this.flow = options.flow || 'both'
         this.deltaXScale = options.deltaXScale || null
+        this.verticalLine = d3.select('body').append('div')
+                        .attr('class', 'verticalLine')
+                        .attr('id', this.type + '' + this.index)
+                        .style('height', this.chart.height + 'px')
+                        .style('top', this.chart.canvas._groups[0][0].offsetTop + this.chart.margin.top + 'px')
+        this.verticalLineTS = this.verticalLine.append('span')
+                         .attr('class', 'verticalLineTS')
     }
 
 
@@ -60,6 +68,19 @@ export class Scatterchart extends Module{
                         .style('left', event.pageX + 5 + 'px')
                         .classed('open', true)
 
+                    this.verticalLine
+                        .style('left', event.pageX + 'px')
+                        .classed('open', true)
+
+                    var others_width = 0
+                    for(let i = 0; i < this.index; i++){
+                        others_width += this.chart.modules[i].own_width
+                    }
+                    var timestamp = this.x.invert(x - others_width - this.chart.margin.left)
+
+                    this.verticalLineTS
+                        .text(transformDate(timestamp))
+
                     notFound = false
                     break loopBoxes
                 }
@@ -69,9 +90,14 @@ export class Scatterchart extends Module{
         if( notFound ){
             tooltip
                 .classed('open', false)
+            this.verticalLine
+                .classed('open', false)
         }
     }
-
+    clearSpecificToolTips(){
+        this.verticalLine
+            .classed('open', false)
+    }
 
     appendModuleOptions(){
         var options = {
@@ -181,8 +207,11 @@ export class Scatterchart extends Module{
         this.own_width = this.chart.width / this.chart.modules.length
         this.x1 =  this.own_width * this.index
 
-        var endTime = new Date(ts - ((this.own_width / this.chart.pixelsPerSecond * 1000) * ((this.chart.modules.length - 1) - this.index) ))
-        var startTime = new Date(endTime.getTime() - this.own_width / this.chart.pixelsPerSecond * 1000)
+//        var endTime = new Date(ts - ((this.own_width / this.chart.pixelsPerSecond * 1000) * ((this.chart.modules.length - 1) - this.index) ))
+//        var startTime = new Date(endTime.getTime() - this.own_width / this.chart.pixelsPerSecond * 1000)
+        var endTime = new Date(ts - this.chart.getDeltaTime(this.index))
+        var startTime = new Date(endTime.getTime() - this.deltaRange )
+
         this.deltaTimeX = endTime - startTime
 
         this.data = this.chart.filterData(startTime, endTime)
@@ -242,8 +271,29 @@ export class Scatterchart extends Module{
         })
 
         // Should I draw the Dots ?
-        this.lowFlow = this.chart.connection.flowPerSecond < this.maxFlowDrawDots ? true : false
-
+        /*if(this.chart.connection.flowPerSecond > this.maxFlowDrawDots){
+            this.flow = 'high'
+            $('#'+this.index+'radio-3').prop('checked', true)
+        }*/
+        /*var previousModule = 0
+        if(this.chart.modules[this.index - 1].type == 'linechart'){
+            previousModule = this.chart.modules[this.index - 1].dots.length
+        }*/
+        if(this.data.length > this.maxDotsFlow && this.flow != 'high'){
+            this.flow = 'high'
+            $('#'+this.index+'radio-3').prop('checked', true)
+            $('#'+this.index+'radio-1').prop('disabled', true)
+            $('#'+this.index+'radio-2').prop('disabled', true)
+        }else if(this.data.length <= this.maxDotsFlow && this.flow == 'high'){
+            $('#'+this.index+'radio-1').prop('disabled', false)
+            $('#'+this.index+'radio-2').prop('disabled', false)
+            this.flow = 'both'
+            $('#'+this.index+'radio-2').prop('checked', true)
+        }
+        /*if(parseInt(this.chart.fps.text()) < 30){
+            //this.chart.pause()
+            console.log(this.data.length)
+        }*/
     }
 
 
@@ -270,31 +320,38 @@ export class Scatterchart extends Module{
           //context.closePath()
         }
         if(this.flow == 'both' || this.flow == 'high'){
+            // High Flow
+            for(let i = 0; i < this.scatterBoxes.length; i++){
+                let x = parent.x1 + parent.chart.margin.left + parent.x(this.scatterBoxes[i].ts)
+                let width = this.squareLength
+                let height = this.squareLength
 
-        // High Flow
-        for(let i = 0; i < this.scatterBoxes.length; i++){
-            let x = parent.x1 + parent.chart.margin.left + parent.x(this.scatterBoxes[i].ts)
-            let width = this.squareLength
-            let height = this.squareLength
+                if( x + width > parent.x1 + parent.chart.margin.left + parent.own_width ){
+                    width = (parent.x1 + parent.chart.margin.left + parent.own_width) - x
+                }else if( x < parent.x1 + parent.chart.margin.left ){
+                    width = width + parent.x(this.scatterBoxes[i].ts)
+                    x = parent.x1 + parent.chart.margin.left
+                }
 
-            if( x + width > parent.x1 + parent.chart.margin.left + parent.own_width ){
-                width = (parent.x1 + parent.chart.margin.left + parent.own_width) - x
-            }else if( x < parent.x1 + parent.chart.margin.left ){
-                width = width + parent.x(this.scatterBoxes[i].ts)
-                x = parent.x1 + parent.chart.margin.left
-            }
+                for(let j = 0; j < this.scatterBoxes[i].vals.length; j++){
+                    let y = parent.chart.margin.top + (j * this.squareLength)
+                    let color = this.scaleColor(this.scatterBoxes[i].vals[j])
 
-            for(let j = 0; j < this.scatterBoxes[i].vals.length; j++){
-                let y = parent.chart.margin.top + (j * this.squareLength)
-                let color = this.scaleColor(this.scatterBoxes[i].vals[j])
-
-                context.beginPath()
-                context.rect(x, y, width, height)
-                context.fillStyle = color
-                context.fill()
-                context.closePath()
+                    context.beginPath()
+                    context.rect(x, y, width, height)
+                    context.fillStyle = color
+                    context.fill()
+                    context.closePath()
+                }
             }
         }
-        }
+
+        // X AXIS
+        context.beginPath()
+        context.fillStyle = 'black'
+        context.textAlign = 'center'
+        context.BaseLine = 'bottom'
+        context.fillText(transformDate(this.x.domain()[1]), this.chart.margin.left + this.own_width + this.x1 , this.chart.margin.top + this.chart.height + 10)
+        context.closePath()
     }
 }

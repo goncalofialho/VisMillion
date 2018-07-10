@@ -50,12 +50,19 @@ export class Connection{
         this.socket = io.connect('http://' + this.host + ':' + this.port)
 
         this.socket.on('message', function(data){
-            let now = new Date()
+            var now
+            if(data['ts'] != undefined){
+                now = new Date(data['ts'] * 1000)
+            }else{
+                now = new Date()
+            }
             chart.data.push({
                 ts: now.getTime(),
-                data: data
+                data: data['val']
             })
+
             packs += 1
+            if (packs % 1000 == 0) console.log('1000 packs: ' + transformDate(now))
             $('#package-count p:first-child i').text(packs)
         })
         var connection = this
