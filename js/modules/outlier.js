@@ -19,7 +19,6 @@ export class Outlier{
 
     mouseEvent(x, y, tooltip, event){
         var notFound = true
-        // TODO: SOMETHING NOT WORKING HERE
         for( let i = 0; i < this.data.length; i++){
             let el = this.data[i]
             let xBox = (this.chart.margin.left + this.chart.x(el.ts)) - this.radius
@@ -64,7 +63,7 @@ export class Outlier{
         }
         this.x1 = this.chart.modules[0].type == 'barchart' ? this.chart.modules[0].own_width : 0
 
-        if( ts > this.scaleRadius.domain()[1].getTime() ){
+        if( ts  > this.scaleRadius.domain()[1].getTime() ){
             this.radius = this.scaleRadius.range()[1]
             let date = new Date()
             let new_range = this.scaleRadius.range().reverse()

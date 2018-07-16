@@ -90,7 +90,7 @@ export class Chart{
             this.modules[i].mouseEvent(mouseX, mouseY, this.tooltip, event)
 
 
-        }else if(this.outlier && insideBox({x: mouseX, y: mouseY}, {x: this.margin.left, y: this.margin.top - this.outlier.height, width: this.outlier.width, height: this.outlier.height})){
+        }else if(this.outlier && insideBox({x: mouseX, y: mouseY}, {x: this.margin.left, y: this.margin.top - this.outlier.height - this.outlier.marginOutlierTop, width: this.outlier.width, height: this.outlier.height})){
             this.outlier.mouseEvent(mouseX, mouseY, this.tooltip, event)
         }else{
             this.tooltip

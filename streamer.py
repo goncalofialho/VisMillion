@@ -46,7 +46,7 @@ class CountThread(Thread):
                     self.pause_cond.wait()
                 val = csvfile.iloc[count][column]
                 if not str(val) == 'nan':
-                    socketio.send(float(val))
+                    socketio.send({'val': float(val)})
                 else:
                     print("NaN found at " + str(count))
 

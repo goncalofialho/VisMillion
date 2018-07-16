@@ -19,7 +19,6 @@ class Outlier{
 
     mouseEvent(x, y, tooltip, event){
         var notFound = true;
-        // TODO: SOMETHING NOT WORKING HERE
         for( let i = 0; i < this.data.length; i++){
             let el = this.data[i];
             let xBox = (this.chart.margin.left + this.chart.x(el.ts)) - this.radius;
@@ -64,7 +63,7 @@ class Outlier{
         }
         this.x1 = this.chart.modules[0].type == 'barchart' ? this.chart.modules[0].own_width : 0;
 
-        if( ts > this.scaleRadius.domain()[1].getTime() ){
+        if( ts  > this.scaleRadius.domain()[1].getTime() ){
             this.radius = this.scaleRadius.range()[1];
             let date = new Date();
             let new_range = this.scaleRadius.range().reverse();
@@ -197,7 +196,7 @@ class Chart{
             this.modules[i].mouseEvent(mouseX, mouseY, this.tooltip, event);
 
 
-        }else if(this.outlier && insideBox({x: mouseX, y: mouseY}, {x: this.margin.left, y: this.margin.top - this.outlier.height, width: this.outlier.width, height: this.outlier.height})){
+        }else if(this.outlier && insideBox({x: mouseX, y: mouseY}, {x: this.margin.left, y: this.margin.top - this.outlier.height - this.outlier.marginOutlierTop, width: this.outlier.width, height: this.outlier.height})){
             this.outlier.mouseEvent(mouseX, mouseY, this.tooltip, event);
         }else{
             this.tooltip
@@ -510,7 +509,8 @@ class Linechart extends Module{
         this.boxPlots = [];
         this.dots = [];
         this.boxPlotSteps = options.boxPlotSteps || 20;
-
+        this.maxmin = options.maxmin || false;
+        this.lineCurve = options.lineCurve || d3.curveBasis;
         // COLORS
         this.lowLineColor = options.lowLineColor || 'black';
         this.highTopAreaColor = options.highTopAreaColor || 'rgba(0, 0, 255, 0.5)';
@@ -547,7 +547,9 @@ class Linechart extends Module{
                             <span>
                                 <p>Quartile 0.75 - <i>${this.boxPlots[i]['0.75']}</i></p>
                                 <p>Median 0.5 - <i>${this.boxPlots[i]['0.5']}</i></p>
-                                <p>Quartile 0.25 - <i>${this.boxPlots[i]['0.5']}</i></p>
+                                <p>Quartile 0.25 - <i>${this.boxPlots[i]['0.25']}</i></p>
+                                <p>Maximum - <i>${this.boxPlots[i]['max']}</i></p>
+                                <p>Minimum - <i>${this.boxPlots[i]['min']}</i></p>
                             </span>
                             `;
                 tooltip.html(markup);
@@ -721,6 +723,7 @@ class Linechart extends Module{
             graphsInFront = 3;
         }
         this.data = this.chart.filterData(startTime, new Date(endTime.getTime() + (delta * 3)));
+        this.data = this.data.filter( el => el.data <= this.chart.y.domain()[1] && el.data > 0);
         //TODO: QUANDO O LINECHART É O MAIS A DIREITA NAO ESTA A DESENHAR PORQUE NAO HA PONTOS NO FUTURO!!! TIRAR GRAPHS IN FRONT, RESOLVER SALTO
 
         // UPDATE DOMAINS
@@ -747,7 +750,9 @@ class Linechart extends Module{
                     0.25 : d3.quantile(elements, .25),
                     0.50 : d3.quantile(elements, .50),
                     0.75 : d3.quantile(elements, .75),
-                    ts   : first_element.ts + (delta / 2)
+                    ts   : first_element.ts + (delta / 2),
+                    max  : elements[elements.length - 1],
+                    min  : elements[0]
                 });
             }
         }else if(this.boxPlots.length > 0){
@@ -761,7 +766,9 @@ class Linechart extends Module{
                     0.25 : d3.quantile(elements, .25),
                     0.50 : d3.quantile(elements, .50),
                     0.75 : d3.quantile(elements, .75),
-                    ts   : timestamp + (delta / 2)
+                    ts   : timestamp + (delta / 2),
+                    max  : elements[elements.length - 1],
+                    min  : elements[0]
                 });
             }
         }
@@ -820,7 +827,7 @@ class Linechart extends Module{
                         }
                     })
                     .y(function(d){ return parent.chart.margin.top + parent.y(d.data); })
-                    .curve(d3.curveBasis)
+                    .curve(this.lineCurve)
                       .context(context);
 
             context.beginPath();
@@ -843,7 +850,7 @@ class Linechart extends Module{
             //        .x(function(d){ return parent.x1 + parent.chart.margin.left + parent.x(d.ts) })
                     .y1(function(d){ return parent.chart.margin.top + parent.y(d['0.25'])})
                     .y0(function(d){ return parent.chart.margin.top + parent.y(d['0.5'])})
-                    .curve(d3.curveBasis)
+                    .curve(this.lineCurve)
                     .context(context);
 
             var areaSuperior = d3.area()
@@ -860,7 +867,7 @@ class Linechart extends Module{
             //        .x(function(d){ return parent.x1 + parent.chart.margin.left + parent.x(d.ts) })
                     .y1(function(d){ return parent.chart.margin.top + parent.y(d['0.75'])})
                     .y0(function(d){ return parent.chart.margin.top + parent.y(d['0.5'])})
-                    .curve(d3.curveBasis)
+                    .curve(this.lineCurve)
                     .context(context);
 
             var mediana = d3.line() //d3.area()
@@ -876,7 +883,7 @@ class Linechart extends Module{
             })
             //        .x(function(d){ return parent.x1 + parent.chart.margin.left + parent.x(d.ts) })
                     .y(function(d){ return parent.chart.margin.top + parent.y(d['0.5'])})
-                    .curve(d3.curveBasis)
+                    .curve(this.lineCurve)
                     .context(context);
 
             context.beginPath();
@@ -897,11 +904,61 @@ class Linechart extends Module{
             context.strokeStyle = this.highMiddleLineColor;
             context.stroke();
             context.lineWidth = 1;
+            context.strokeStyle = 'black';
             context.closePath();
 
 
+
         }
-        // X AXIS
+        if(this.maxmin){
+            var max = d3.line()
+            .x(function(d){
+                    if(parent.x(d.ts) < 0){
+                        return parent.x1 + parent.chart.margin.left
+                    }else if(parent.x(d.ts) > parent.own_width){
+                        return parent.x1 + parent.chart.margin.left + parent.own_width
+                    }else{
+                        return parent.x1 + parent.chart.margin.left + parent.x(d.ts)
+                    }
+            })
+                    .y(function(d){ return parent.chart.margin.top + parent.y(d['max'])})
+                    .curve(this.lineCurve)
+                    .context(context);
+
+            var min = d3.line()
+            .x(function(d){
+                    if(parent.x(d.ts) < 0){
+                        return parent.x1 + parent.chart.margin.left
+                    }else if(parent.x(d.ts) > parent.own_width){
+                        return parent.x1 + parent.chart.margin.left + parent.own_width
+                    }else{
+                        return parent.x1 + parent.chart.margin.left + parent.x(d.ts)
+                    }
+            })
+                    .y(function(d){return parent.chart.margin.top + parent.y(d['min'])})
+                    .curve(this.lineCurve)
+                    .context(context);
+            context.beginPath();
+            max(this.boxPlots);
+            context.stroke();
+            context.closePath();
+            context.beginPath();
+            min(this.boxPlots);
+            context.stroke();
+            context.closePath();
+        }
+/*
+        for(var i = 0; i < this.boxPlots.length; i++){
+            let x = this.x1 + this.chart.margin.left + this.x(this.boxPlots[i].ts)
+            let y = this.chart.margin.top
+            let height = this.chart.height
+            context.beginPath()
+            context.moveTo(x,y)
+            context.lineTo(x,y+height)
+            context.stroke()
+            context.closePath()
+        }
+*/        // X AXIS
         context.beginPath();
         context.fillStyle = 'black';
         context.textAlign = 'center';
@@ -1618,7 +1675,7 @@ $(document).ready(function(){
         xDomain: [0,100],
         yDomain: [1e-6,100],
         yScale: d3.scaleLog(),
-        selfDelay: 1000,
+        selfDelay: 0,
         container: d3.select('.bigvis'),
         outlier: true/*,
         outlier_opts : {
@@ -1643,7 +1700,9 @@ $(document).ready(function(){
         index : obj.modules.length,
         flow  : 'high',
         boxPlotSteps : 30,
-        deltaRange: 30000
+        deltaRange: 30000,
+        lineCurve : d3.curveCardinal,
+        maxmin: true
     });
 
     var module2 = new Scatterchart({

@@ -21,7 +21,7 @@ $(document).ready(function(){
         xDomain: [0,100],
         yDomain: [1e-6,100],
         yScale: d3.scaleLog(),
-        selfDelay: 1000,
+        selfDelay: 0,
         container: d3.select('.bigvis'),
         outlier: true/*,
         outlier_opts : {
@@ -46,7 +46,9 @@ $(document).ready(function(){
         index : obj.modules.length,
         flow  : 'high',
         boxPlotSteps : 30,
-        deltaRange: 30000
+        deltaRange: 30000,
+        lineCurve : d3.curveCardinal,
+        maxmin: true
     })
 
     var module2 = new Scatterchart({
