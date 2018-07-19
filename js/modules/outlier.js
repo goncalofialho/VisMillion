@@ -66,6 +66,8 @@ export class Outlier{
         if( ts  > this.scaleRadius.domain()[1].getTime() ){
             this.radius = this.scaleRadius.range()[1]
             let date = new Date()
+            // this prevents transitions to get negative values (because of selfDelay)
+            date = new Date(date.getTime() - this.chart.selfDelay)
             let new_range = this.scaleRadius.range().reverse()
             this.scaleRadius = d3.scaleTime().domain([date, new Date(date.getTime() + this.chart.transitions * 2)]).range(new_range)
 

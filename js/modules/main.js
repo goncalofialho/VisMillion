@@ -21,7 +21,7 @@ $(document).ready(function(){
         xDomain: [0,100],
         yDomain: [1e-6,100],
         yScale: d3.scaleLog(),
-        selfDelay: 0,
+        selfDelay: 1000,
         container: d3.select('.bigvis'),
         outlier: true/*,
         outlier_opts : {
@@ -58,7 +58,7 @@ $(document).ready(function(){
         dotsRadius : 1,
         squareLength : 20,
         squareColor : 'orange',
-        squareDensity : 50,
+        squareDensity : 30,
         squareDensityRange : [0, 300],
         maxDotsFlow : 3000,
         deltaRange : 15000

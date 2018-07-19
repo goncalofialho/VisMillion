@@ -238,10 +238,12 @@ export class Chart{
         context.textAlign = "right"
         context.textBaseline = "middle"
         ticksY.forEach(function(d){
+            let text = tickYFormat(d)
+            if(text.length > 6) text = parseFloat(text).toExponential()
             context.textAlign = "right"
-            context.fillText(tickYFormat(d), margin.left-6 , margin.top + y(d))
+            context.fillText(text, margin.left-6 , margin.top + y(d))
             context.textAlign = "left"
-            context.fillText(tickYFormat(d), margin.left + width + 6 , margin.top + y(d))
+            context.fillText(text, margin.left + width + 6 , margin.top + y(d))
 
         })
 

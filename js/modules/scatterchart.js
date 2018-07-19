@@ -59,8 +59,21 @@ export class Scatterchart extends Module{
                 yBox = this.chart.margin.top + (j * this.squareLength)
                 if(this.scatterBoxes[i].vals[j] > 0 && insideBox({x:x, y:y},{x:xBox, y:yBox, width: width, height: height})){
                     var val = this.scatterBoxes[i].vals[j]
+                    var startTime = transformDate(new Date(this.scatterBoxes[i].ts))
+                    var endTime = transformDate(new Date(this.scatterBoxes[i+1].ts))
+                    var yCells = Math.ceil(this.chart.height / this.squareLength)
+                    var scaleY = this.chart.y.copy()
+                    scaleY.domain(this.y.domain()).range([yCells,0])
+                    var from = scaleY.invert(j+1)
+                    var to = scaleY.invert(j)
+                    if(from.toString().length > 5) from = expo(from, 3)
+                    if(to.toString().length > 5) to = expo(to, 3)
                     var markup = `
-                        <span><i>${val}</i></span>
+                        <span>
+                            <p>Time Range  - [${startTime}  -  ${endTime}]</p>
+                            <p>Interval    - [${from} - ${to}]</p>
+                            <p>Dots Amount - <i>${val}</i></p>
+                        </span>
                         `
                     tooltip.html(markup)
                     tooltip
