@@ -26,7 +26,7 @@ class Outlier{
             let width = this.radius * 2;
             let height = this.radius * 2;
             if(insideBox({x:x, y:y},{x:xBox, y:yBox, width: width, height: height})){
-                let data = el.data;
+                let data = el.data.toFixed(2);
                 let ts = (new Date(el.ts)).toLocaleString();
                 var markup = `
                             <span>
@@ -121,6 +121,10 @@ class Chart{
         this.yScale = options.yScale || d3.scaleLinear();
         this.timerControl;
         this.connection;
+        this.sci_notation = true;
+        if(options.sci_notation == false){
+            this.sci_notation = false;
+        }
         this.selfDelay = options.selfDelay || 100;
         if(options.outlier){
             var outlierHeight =/* options.outlier_opts.outlierHeight ||*/ 100;
@@ -150,6 +154,7 @@ class Chart{
 
         this.time0 = Date.now();
         this.fps = d3.select('#fps span');
+
 
         if(options.outlier){
             if(options.outlier_opts){
@@ -547,13 +552,19 @@ class Linechart extends Module{
             let height = Math.abs(this.y(this.boxPlots[i]['0.25']) - this.y(this.boxPlots[i]['0.75']));
 
             if(insideBox({x:x, y:y},{x:xBox, y:yBox, width: width, height: height})){
+                var upperQuantile = this.chart.sci_notation ? reduceNumber(this.boxPlots[i]['0.75'], 5, 3) : this.boxPlots[i]['0.75'].toFixed(2);
+                var lowerQuantile = this.chart.sci_notation ? reduceNumber(this.boxPlots[i]['0.25'], 5, 3) : this.boxPlots[i]['0.25'].toFixed(2);
+                var median        = this.chart.sci_notation ? reduceNumber(this.boxPlots[i]['0.5'], 5, 3)  : this.boxPlots[i]['0.5'].toFixed(2);
+                var maximum       = this.chart.sci_notation ? reduceNumber(this.boxPlots[i]['max'], 5, 3)  : this.boxPlots[i]['max'].toFixed(2);
+                var minimum       = this.chart.sci_notation ? reduceNumber(this.boxPlots[i]['min'], 5, 3)  : this.boxPlots[i]['min'].toFixed(2);
+
                 var markup = `
                             <span>
-                                <p>Quartile 0.75 - <i>${this.boxPlots[i]['0.75']}</i></p>
-                                <p>Median 0.5 - <i>${this.boxPlots[i]['0.5']}</i></p>
-                                <p>Quartile 0.25 - <i>${this.boxPlots[i]['0.25']}</i></p>
-                                <p>Maximum - <i>${this.boxPlots[i]['max']}</i></p>
-                                <p>Minimum - <i>${this.boxPlots[i]['min']}</i></p>
+                                <p>Quartile 0.75 - <i>${upperQuantile}</i></p>
+                                <p>Median 0.5 - <i>${median}</i></p>
+                                <p>Quartile 0.25 - <i>${lowerQuantile}</i></p>
+                                <p>Maximum - <i>${maximum}</i></p>
+                                <p>Minimum - <i>${minimum}</i></p>
                             </span>
                             `;
                 tooltip.html(markup);
@@ -1679,6 +1690,8 @@ class Connection{
 
 var obj;
 var connection;
+var usability_test = 3;
+var usability_arr = [];
 $(document).ready(function(){
 
     // CHART
@@ -1690,10 +1703,11 @@ $(document).ready(function(){
         pixelsPerSecond: 10,
         bgColor: '#ffffff',
         xDomain: [0,100],
-        yDomain: [1e-6,100],
-        yScale: d3.scaleLog(),
+        yDomain: [0,100],
+        yScale: d3.scaleLinear(),
         selfDelay: 1000,
         container: d3.select('.bigvis'),
+        sci_notation: false,
         outlier: true/*,
         outlier_opts : {
             outlierHeight : 100,
@@ -1729,7 +1743,7 @@ $(document).ready(function(){
         dotsRadius : 1,
         squareLength : 20,
         squareColor : 'orange',
-        squareDensity : 30,
+        squareDensity : 45,
         squareDensityRange : [0, 300],
         maxDotsFlow : 3000,
         deltaRange : 15000
@@ -1762,4 +1776,18 @@ $(document).ready(function(){
     connection.connect();
     /* Start Rendering */
     obj.start();
+
+
+
+    //Usability Tests Tool
+    document.querySelector('html').addEventListener('keypress', function(e){
+        if(e.key === 'Enter'){
+            let ts = new Date();
+            let delta = ts - obj.data[0].ts;
+            usability_arr.push(delta);
+            console.log(usability_arr);
+            document.cookie='test'+usability_test+'='+JSON.stringify(usability_arr)+'; expires=Thu, 18 Dec 2025 12:00:00 UTC';
+        }
+    });
+
 });

@@ -36,6 +36,11 @@ function expo(x, f) {
   return Number.parseFloat(x).toExponential(f);
 }
 
+function reduceNumber(number, max_length, f){
+    if(number.toString().length > max_length) return expo(number, f)
+    return number
+}
+
 function transformDate(date){
     return  ('0' + date.getHours()).slice(-2) + ':' + ('0' + date.getMinutes()).slice(-2) + ':' + ('0' + date.getSeconds()).slice(-2)
 }

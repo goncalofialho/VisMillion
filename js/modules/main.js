@@ -8,6 +8,8 @@ import { Connection } from './connection.js'
 var timerControl;
 var obj;
 var connection;
+var usability_test = 3;
+var usability_arr = [];
 $(document).ready(function(){
 
     // CHART
@@ -19,10 +21,11 @@ $(document).ready(function(){
         pixelsPerSecond: 10,
         bgColor: '#ffffff',
         xDomain: [0,100],
-        yDomain: [1e-6,100],
-        yScale: d3.scaleLog(),
+        yDomain: [0,100],
+        yScale: d3.scaleLinear(),
         selfDelay: 1000,
         container: d3.select('.bigvis'),
+        sci_notation: false,
         outlier: true/*,
         outlier_opts : {
             outlierHeight : 100,
@@ -58,7 +61,7 @@ $(document).ready(function(){
         dotsRadius : 1,
         squareLength : 20,
         squareColor : 'orange',
-        squareDensity : 30,
+        squareDensity : 45,
         squareDensityRange : [0, 300],
         maxDotsFlow : 3000,
         deltaRange : 15000
@@ -91,4 +94,18 @@ $(document).ready(function(){
     connection.connect()
     /* Start Rendering */
     obj.start()
+
+
+
+    //Usability Tests Tool
+    document.querySelector('html').addEventListener('keypress', function(e){
+        if(e.key === 'Enter'){
+            let ts = new Date()
+            let delta = ts - obj.data[0].ts
+            usability_arr.push(delta)
+            console.log(usability_arr)
+            document.cookie='test'+usability_test+'='+JSON.stringify(usability_arr)+'; expires=Thu, 18 Dec 2025 12:00:00 UTC'
+        }
+    })
+
 })

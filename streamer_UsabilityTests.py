@@ -19,7 +19,8 @@ csvfile = csvfile.sort_values(by=column_timestamp)
 column = 'Trip Seconds'
 maximum = len(csvfile.index)
 """
-csvfile = pd.read_csv('usability_tests1.csv', encoding='utf-8')
+csvfile = pd.read_csv('testfile.csv', encoding='utf-8')
+#csvfile = pd.read_csv('usabilityTest1_2.csv', encoding='utf-8')
 column_timestamp = 'delta'
 #csvfile = csvfile.sort_values(by=column_timestamp)
 column = 'trans_satoshis'

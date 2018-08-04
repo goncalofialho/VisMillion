@@ -52,13 +52,19 @@ export class Linechart extends Module{
 
             if(insideBox({x:x, y:y},{x:xBox, y:yBox, width: width, height: height})){
                 var val = i
+                var upperQuantile = this.chart.sci_notation ? reduceNumber(this.boxPlots[i]['0.75'], 5, 3) : this.boxPlots[i]['0.75'].toFixed(2)
+                var lowerQuantile = this.chart.sci_notation ? reduceNumber(this.boxPlots[i]['0.25'], 5, 3) : this.boxPlots[i]['0.25'].toFixed(2)
+                var median        = this.chart.sci_notation ? reduceNumber(this.boxPlots[i]['0.5'], 5, 3)  : this.boxPlots[i]['0.5'].toFixed(2)
+                var maximum       = this.chart.sci_notation ? reduceNumber(this.boxPlots[i]['max'], 5, 3)  : this.boxPlots[i]['max'].toFixed(2)
+                var minimum       = this.chart.sci_notation ? reduceNumber(this.boxPlots[i]['min'], 5, 3)  : this.boxPlots[i]['min'].toFixed(2)
+
                 var markup = `
                             <span>
-                                <p>Quartile 0.75 - <i>${this.boxPlots[i]['0.75']}</i></p>
-                                <p>Median 0.5 - <i>${this.boxPlots[i]['0.5']}</i></p>
-                                <p>Quartile 0.25 - <i>${this.boxPlots[i]['0.25']}</i></p>
-                                <p>Maximum - <i>${this.boxPlots[i]['max']}</i></p>
-                                <p>Minimum - <i>${this.boxPlots[i]['min']}</i></p>
+                                <p>Quartile 0.75 - <i>${upperQuantile}</i></p>
+                                <p>Median 0.5 - <i>${median}</i></p>
+                                <p>Quartile 0.25 - <i>${lowerQuantile}</i></p>
+                                <p>Maximum - <i>${maximum}</i></p>
+                                <p>Minimum - <i>${minimum}</i></p>
                             </span>
                             `
                 tooltip.html(markup)

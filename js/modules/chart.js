@@ -13,6 +13,10 @@ export class Chart{
         this.yScale = options.yScale || d3.scaleLinear()
         this.timerControl
         this.connection
+        this.sci_notation = true
+        if(options.sci_notation == false){
+            this.sci_notation = false
+        }
         this.selfDelay = options.selfDelay || 100
         if(options.outlier){
             var outlierHeight =/* options.outlier_opts.outlierHeight ||*/ 100
@@ -42,6 +46,7 @@ export class Chart{
 
         this.time0 = Date.now()
         this.fps = d3.select('#fps span')
+
 
         if(options.outlier){
             if(options.outlier_opts){

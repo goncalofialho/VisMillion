@@ -26,7 +26,7 @@ export class Outlier{
             let width = this.radius * 2
             let height = this.radius * 2
             if(insideBox({x:x, y:y},{x:xBox, y:yBox, width: width, height: height})){
-                let data = el.data
+                let data = el.data.toFixed(2)
                 let ts = (new Date(el.ts)).toLocaleString()
                 var markup = `
                             <span>
