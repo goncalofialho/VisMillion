@@ -111,6 +111,7 @@ class Outlier{
 
 class Chart{
     constructor(options){
+    this.outliers = [];
         this.width = options.width || 800;
         this.height = options.height || 400;
         this.margin = options.margin || {top: 20, right: 10, left: 10, bottom: 10};
@@ -1665,6 +1666,12 @@ class Connection{
             packs += 1;
             if (packs % 1000 == 0) console.log('1000 packs: ' + transformDate(now));
             $('#package-count p:first-child i').text(packs);
+
+            if (data['val'] >= 100) {
+                chart.outliers.push(new Date());
+                console.log('OUTLIER!');
+                console.log(data['val']);
+            }
         });
         var connection = this;
         this.socket.on('delay', function(data){
@@ -1692,8 +1699,8 @@ var obj;
 var connection;
 var usability_test = 3;
 var usability_arr = [];
-$(document).ready(function(){
 
+$(document).ready(function(){
     // CHART
     obj = new Chart({
         width: $('.container').width() ,
@@ -1783,9 +1790,8 @@ $(document).ready(function(){
     document.querySelector('html').addEventListener('keypress', function(e){
         if(e.key === 'Enter'){
             let ts = new Date();
-            let delta = ts - obj.data[0].ts;
+            let delta = ts - obj.data[0].ts - obj.selfDelay;
             usability_arr.push(delta);
-            console.log(usability_arr);
             document.cookie='test'+usability_test+'='+JSON.stringify(usability_arr)+'; expires=Thu, 18 Dec 2025 12:00:00 UTC';
         }
     });

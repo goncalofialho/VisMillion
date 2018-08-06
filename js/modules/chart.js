@@ -3,6 +3,7 @@ import { Outlier } from './outlier.js'
 
 export class Chart{
     constructor(options){
+    this.outliers = []
         this.width = options.width || 800
         this.height = options.height || 400
         this.margin = options.margin || {top: 20, right: 10, left: 10, bottom: 10}

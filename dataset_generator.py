@@ -65,7 +65,57 @@ def aggregation(moment, size ):
 
 if __name__ == '__main__':
     file.write('delta,trans_satoshis\n')
+    ### CONSTANT
+    size = 550
+    delta_interval = [70, 90]
+    vals = [10, 50]
+    constant_vals(size, delta_interval, vals, prob_chance=10, prob_interval=[5, 70])
 
+
+    print("Dataset milliseconds: " + str(dataset_time))
+
+""" 
+    TEST 2 
+    ### CONSTANT
+    size = 150
+    delta_interval = [50, 100]
+    vals = [10, 65]
+    constant_vals(size, delta_interval, vals, prob_chance=0, prob_interval=[10, 90])
+    mark_outlier()
+    ### CONSTANT
+    size = 40
+    delta_interval = [10, 20]
+    vals = [10, 65]
+    constant_vals(size, delta_interval, vals, prob_chance=99, prob_interval=[90, 95])
+    ### CONSTANT
+    size = 250
+    delta_interval = [50, 100]
+    vals = [10, 70]
+    constant_vals(size, delta_interval, vals, prob_chance=0, prob_interval=[10, 90], outliers={170: 150})
+    ### CONSTANT
+    size = 150
+    delta_interval = [50, 100]
+    vals = [10, 65]
+    constant_vals(size, delta_interval, vals, prob_chance=0, prob_interval=[10, 90])
+    mark_outlier()
+    ### CONSTANT
+    size = 50
+    delta_interval = [5, 15]
+    vals = [10, 65]
+    constant_vals(size, delta_interval, vals, prob_chance=99, prob_interval=[5, 10])
+    ### CONSTANT
+    size = 250
+    delta_interval = [50, 100]
+    vals = [10, 60]
+    constant_vals(size, delta_interval, vals, prob_chance=0, prob_interval=[10, 90], outliers={150: 110})
+
+    print("Dataset milliseconds: " + str(dataset_time))
+"""
+
+
+"""
+    TEST 2
+    
     ### CONSTANT
     size = 150
     delta_interval = [50, 100]
@@ -102,11 +152,12 @@ if __name__ == '__main__':
 
 
     print("Dataset milliseconds: " + str(dataset_time))
+"""
 
 """
     TEST 3 
     
-    ### CONSTANT
+        ### CONSTANT
     size = 100
     delta_interval = [50, 100]
     vals = [30, 70]
@@ -139,14 +190,13 @@ if __name__ == '__main__':
     delta_interval = [150, 250]
     vals = [20, 80]
     constant_vals(size, delta_interval, vals, prob_chance=0, prob_interval=[5, 90])
-    mark_outlier()
+    #mark_outlier()
     ### CONSTANT
     size = 25
     delta_interval = [200, 350]
     vals = [20, 80]
     constant_vals(size, delta_interval, vals, prob_chance=0, prob_interval=[5, 90])
     mark_outlier()
-
 
     ### CONSTANT
     size = 250
@@ -160,13 +210,15 @@ if __name__ == '__main__':
     delta_interval = [1, 5]
     vals = [43, 88]
     constant_vals(size, delta_interval, vals, prob_chance=20, prob_interval=[10, 45])
-    mark_outlier()
+    #mark_outlier()
 
     ### CONSTANT
-    size = 300
-    delta_interval = [3, 10]
-    vals = [43, 88]
-    constant_vals(size, delta_interval, vals, prob_chance=20, prob_interval=[10, 45])
-    mark_outlier()
+    #size = 300
+    #delta_interval = [3, 10]
+    #vals = [43, 88]
+    #constant_vals(size, delta_interval, vals, prob_chance=20, prob_interval=[10, 45])
+    #mark_outlier()
+
+    print("Dataset milliseconds: " + str(dataset_time))
 """
 

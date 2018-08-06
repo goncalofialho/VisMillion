@@ -3,15 +3,15 @@ import { Linechart } from './linechart.js'
 import { Scatterchart} from './scatterchart.js'
 import { Barchart} from './barchart.js'
 import { Connection } from './connection.js'
-
+'use strict';
 
 var timerControl;
 var obj;
 var connection;
 var usability_test = 3;
 var usability_arr = [];
-$(document).ready(function(){
 
+$(document).ready(function(){
     // CHART
     obj = new Chart({
         width: $('.container').width() ,
@@ -101,9 +101,8 @@ $(document).ready(function(){
     document.querySelector('html').addEventListener('keypress', function(e){
         if(e.key === 'Enter'){
             let ts = new Date()
-            let delta = ts - obj.data[0].ts
+            let delta = ts - obj.data[0].ts - obj.selfDelay
             usability_arr.push(delta)
-            console.log(usability_arr)
             document.cookie='test'+usability_test+'='+JSON.stringify(usability_arr)+'; expires=Thu, 18 Dec 2025 12:00:00 UTC'
         }
     })

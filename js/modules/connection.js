@@ -1,6 +1,5 @@
 import { Chart } from './chart.js'
 
-
 export class Connection{
     constructor(options){
         if(options.host == undefined){
@@ -64,6 +63,12 @@ export class Connection{
             packs += 1
             if (packs % 1000 == 0) console.log('1000 packs: ' + transformDate(now))
             $('#package-count p:first-child i').text(packs)
+
+            if (data['val'] >= 100) {
+                chart.outliers.push(new Date())
+                console.log('OUTLIER!')
+                console.log(data['val'])
+            }
         })
         var connection = this
         this.socket.on('delay', function(data){
