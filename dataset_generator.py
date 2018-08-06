@@ -66,11 +66,25 @@ def aggregation(moment, size ):
 if __name__ == '__main__':
     file.write('delta,trans_satoshis\n')
     ### CONSTANT
-    size = 550
-    delta_interval = [70, 90]
-    vals = [10, 50]
-    constant_vals(size, delta_interval, vals, prob_chance=10, prob_interval=[5, 70])
+    size = 1150
+    delta_interval = [10, 20]
+    vals = [80, 90]
+    constant_vals(size, delta_interval, vals, prob_chance=5, prob_interval=[35, 90])
 
+    mark_outlier()
+    ### DESCENDING
+    size = 250
+    delta_interval = [20, 80]
+    vals = [20, 80]
+    alfa_random = [-10, 10]
+    linear_generation(size, delta_interval, vals, alfa_random, positive=False, prob_chance=10, prob_interval=[35, 65])
+
+    mark_outlier()
+    ### CONSTANT
+    size = 150
+    delta_interval = [100, 200]
+    vals = [20, 30]
+    constant_vals(size, delta_interval, vals, prob_chance=5, prob_interval=[30, 65])
 
     print("Dataset milliseconds: " + str(dataset_time))
 

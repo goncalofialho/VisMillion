@@ -45,12 +45,18 @@ export class Linechart extends Module{
         var scale = d3.scaleTime().domain(timeInterval).range([0, steps])
         var delta = scale.invert(1).getTime() - scale.invert(0).getTime()
         for(var i = 0; i < this.boxPlots.length; i++){
-            let xBox = this.x1 + this.chart.margin.left + (this.x(this.boxPlots[i].ts - delta))
-            let width = this.x(this.boxPlots[i].ts + delta)
+            // CHECKS IF BOX IS DISPLAYED
+            if(this.x(this.boxPlots[i].ts) > this.own_width || this.x(this.boxPlots[i].ts) < 0){
+                //console.log(i + ' not displaying')
+                continue
+            }
+            let xBox = this.x1 + this.chart.margin.left + (this.x(this.boxPlots[i].ts - delta)) - 5 // THIS 5 PREVENTS BUG FROM ROUNDING TIMESTAMPS AT UPDATE PHASE (delta/2)
+            let width = this.x(this.boxPlots[i].ts + delta) - (this.x(this.boxPlots[i].ts - delta))
             let yBox = this.chart.margin.top + this.y(this.boxPlots[i][0.75])
             let height = Math.abs(this.y(this.boxPlots[i]['0.25']) - this.y(this.boxPlots[i]['0.75']))
 
             if(insideBox({x:x, y:y},{x:xBox, y:yBox, width: width, height: height})){
+                console.log('Displaying box ' + i)
                 var val = i
                 var upperQuantile = this.chart.sci_notation ? reduceNumber(this.boxPlots[i]['0.75'], 5, 3) : this.boxPlots[i]['0.75'].toFixed(2)
                 var lowerQuantile = this.chart.sci_notation ? reduceNumber(this.boxPlots[i]['0.25'], 5, 3) : this.boxPlots[i]['0.25'].toFixed(2)
