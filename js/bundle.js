@@ -1707,7 +1707,26 @@ var usability_test = 4;
 var usability_arr = [];
 
 $(document).ready(function(){
-    // CHART
+	$('.modules-options').css('display','none');
+	// CHART - EXAMPLE/
+    /*obj = new Chart({
+        width: $('.container').width() ,
+        height: 400,
+        margin: {top: 30, right: 40, left: 40, bottom: 25},
+        transitions: 300,
+        pixelsPerSecond: 10,
+        bgColor: '#ffffff',
+        xDomain: [0,100],
+        yDomain: [1e-6,100],
+        yScale: d3.scaleLog(),
+        selfDelay: 1000,
+        container: d3.select('.bigvis'),
+        sci_notation: true,
+        outlier: true
+    })*/
+	
+	
+	// CHART
     obj = new Chart({
         width: $('.container').width() ,
         height: 400,
@@ -1721,13 +1740,9 @@ $(document).ready(function(){
         selfDelay: 1000,
         container: d3.select('.bigvis'),
         sci_notation: false,
-        outlier: false/*,
-        outlier_opts : {
-            outlierHeight : 100,
-
-        }*/
+        outlier: false
     });
-
+	
     // MODULES
 
     var module1 = new Barchart({

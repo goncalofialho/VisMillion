@@ -15,7 +15,7 @@ THREAD = Thread()
 """
 csvfile = pd.read_csv('Taxi_Trips_sample.csv', encoding='utf-8')
 column_timestamp = 'Trip Start Timestamp'
-csvfile = csvfile.sort_values(by=column_timestamp)
+csvfile = csvfile.sort_svalues(by=column_timestamp)
 column = 'Trip Seconds'
 maximum = len(csvfile.index)
 """
