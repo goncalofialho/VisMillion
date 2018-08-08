@@ -8,7 +8,7 @@ import { Connection } from './connection.js'
 var timerControl;
 var obj;
 var connection;
-var usability_test = 3;
+var usability_test = 4;
 var usability_arr = [];
 
 $(document).ready(function(){
@@ -26,7 +26,7 @@ $(document).ready(function(){
         selfDelay: 1000,
         container: d3.select('.bigvis'),
         sci_notation: false,
-        outlier: true/*,
+        outlier: false/*,
         outlier_opts : {
             outlierHeight : 100,
 
@@ -61,7 +61,7 @@ $(document).ready(function(){
         dotsRadius : 1,
         squareLength : 20,
         squareColor : 'orange',
-        squareDensity : 45,
+        squareDensity : 25,
         squareDensityRange : [0, 300],
         maxDotsFlow : 3000,
         deltaRange : 15000
