@@ -56,7 +56,7 @@ export class Linechart extends Module{
             let height = Math.abs(this.y(this.boxPlots[i]['0.25']) - this.y(this.boxPlots[i]['0.75']))
 
             if(insideBox({x:x, y:y},{x:xBox, y:yBox, width: width, height: height})){
-                console.log('Displaying box ' + i)
+                //console.log('Displaying box ' + i)
                 var val = i
                 var upperQuantile = this.chart.sci_notation ? reduceNumber(this.boxPlots[i]['0.75'], 5, 3) : this.boxPlots[i]['0.75'].toFixed(2)
                 var lowerQuantile = this.chart.sci_notation ? reduceNumber(this.boxPlots[i]['0.25'], 5, 3) : this.boxPlots[i]['0.25'].toFixed(2)

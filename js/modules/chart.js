@@ -46,6 +46,7 @@ export class Chart{
         this.y.domain(yDomain)
 
         this.time0 = Date.now()
+		this.time0 =  performance.now()
         this.fps = d3.select('#fps span')
 
 
@@ -172,6 +173,7 @@ export class Chart{
 
         // COMPUTE FPS
         var time1 = Date.now()
+		var time1 = performance.now()
         this.fps.text(Math.round(1000/ (time1 - this.time0)))
         this.time0 = time1
 

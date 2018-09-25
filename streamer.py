@@ -26,14 +26,14 @@ column_timestamp = 'timestamp'
 #csvfile = csvfile.sort_values(by=column_timestamp)
 column = 'trans_satoshis'
 maximum = len(csvfile.index)
-start_at = 59000
+start_at = 1000
 
 class CountThread(Thread):
     """Stream data on Thread"""
 
     def __init__(self):
         super(CountThread, self).__init__()
-        self.delay = 1
+        self.delay = 0.0001
         self.paused = False
         self.pause_cond = threading.Condition(threading.Lock())
 

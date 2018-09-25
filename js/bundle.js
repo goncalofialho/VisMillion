@@ -154,6 +154,7 @@ class Chart{
         this.y.domain(yDomain);
 
         this.time0 = Date.now();
+		this.time0 =  performance.now();
         this.fps = d3.select('#fps span');
 
 
@@ -280,6 +281,7 @@ class Chart{
 
         // COMPUTE FPS
         var time1 = Date.now();
+		var time1 = performance.now();
         this.fps.text(Math.round(1000/ (time1 - this.time0)));
         this.time0 = time1;
 
@@ -558,7 +560,6 @@ class Linechart extends Module{
             let height = Math.abs(this.y(this.boxPlots[i]['0.25']) - this.y(this.boxPlots[i]['0.75']));
 
             if(insideBox({x:x, y:y},{x:xBox, y:yBox, width: width, height: height})){
-                console.log('Displaying box ' + i);
                 var upperQuantile = this.chart.sci_notation ? reduceNumber(this.boxPlots[i]['0.75'], 5, 3) : this.boxPlots[i]['0.75'].toFixed(2);
                 var lowerQuantile = this.chart.sci_notation ? reduceNumber(this.boxPlots[i]['0.25'], 5, 3) : this.boxPlots[i]['0.25'].toFixed(2);
                 var median        = this.chart.sci_notation ? reduceNumber(this.boxPlots[i]['0.5'], 5, 3)  : this.boxPlots[i]['0.5'].toFixed(2);
@@ -1670,13 +1671,13 @@ class Connection{
             });
 
             packs += 1;
-            if (packs % 1000 == 0) console.log('1000 packs: ' + transformDate(now));
+            //if (packs % 1000 == 0) console.log('1000 packs: ' + transformDate(now))
             $('#package-count p:first-child i').text(packs);
 
             if (data['val'] >= 100) {
                 chart.outliers.push(new Date());
-                console.log('OUTLIER!');
-                console.log(data['val']);
+                //console.log('OUTLIER!')
+                //console.log(data['val'])
             }
         });
         var connection = this;
@@ -1707,9 +1708,9 @@ var usability_test = 4;
 var usability_arr = [];
 
 $(document).ready(function(){
-	$('.modules-options').css('display','none');
+	//$('.modules-options').css('display','none')
 	// CHART - EXAMPLE/
-    /*obj = new Chart({
+    obj = new Chart({
         width: $('.container').width() ,
         height: 400,
         margin: {top: 30, right: 40, left: 40, bottom: 25},
@@ -1723,9 +1724,9 @@ $(document).ready(function(){
         container: d3.select('.bigvis'),
         sci_notation: true,
         outlier: true
-    })*/
+    });
 	
-	
+	/*
 	// CHART
     obj = new Chart({
         width: $('.container').width() ,
@@ -1741,7 +1742,7 @@ $(document).ready(function(){
         container: d3.select('.bigvis'),
         sci_notation: false,
         outlier: false
-    });
+    })*/
 	
     // MODULES
 
@@ -1769,9 +1770,9 @@ $(document).ready(function(){
         index : obj.modules.length,
         dotsColor  : 'black',
         dotsRadius : 1,
-        squareLength : 20,
+        squareLength : 25,
         squareColor : 'orange',
-        squareDensity : 25,
+        squareDensity : 45,
         squareDensityRange : [0, 300],
         maxDotsFlow : 3000,
         deltaRange : 15000

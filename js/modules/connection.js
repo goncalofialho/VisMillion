@@ -61,13 +61,13 @@ export class Connection{
             })
 
             packs += 1
-            if (packs % 1000 == 0) console.log('1000 packs: ' + transformDate(now))
+            //if (packs % 1000 == 0) console.log('1000 packs: ' + transformDate(now))
             $('#package-count p:first-child i').text(packs)
 
             if (data['val'] >= 100) {
                 chart.outliers.push(new Date())
-                console.log('OUTLIER!')
-                console.log(data['val'])
+                //console.log('OUTLIER!')
+                //console.log(data['val'])
             }
         })
         var connection = this
