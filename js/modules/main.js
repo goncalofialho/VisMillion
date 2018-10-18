@@ -8,8 +8,8 @@ import { Connection } from './connection.js'
 var timerControl;
 var obj;
 var connection;
-var usability_test = 4;
-var usability_arr = [];
+var usability_test = undefined;
+var usability_arr = usability_test != undefined ? [] : undefined;
 
 $(document).ready(function(){
 	//$('.modules-options').css('display','none')
@@ -110,16 +110,15 @@ $(document).ready(function(){
     /* Start Rendering */
     obj.start()
 
-
-
-    //Usability Tests Tool
-    document.querySelector('html').addEventListener('keypress', function(e){
-        if(e.key === 'Enter'){
-            let ts = new Date()
-            let delta = ts - obj.data[0].ts - obj.selfDelay
-            usability_arr.push(delta)
-            document.cookie='test'+usability_test+'='+JSON.stringify(usability_arr)+'; expires=Thu, 18 Dec 2025 12:00:00 UTC'
-        }
-    })
-
+    //Usability Tests Register
+    if(usability_test != undefined) {
+        document.querySelector('html').addEventListener('keypress', function(e){
+            if(e.key === 'Enter'){
+                let ts = new Date()
+                let delta = ts - obj.data[0].ts - obj.selfDelay
+                usability_arr.push(delta)
+                document.cookie='test'+usability_test+'='+JSON.stringify(usability_arr)+'; expires=Thu, 18 Dec 2025 12:00:00 UTC'
+            }
+        })
+    }
 })
