@@ -1710,7 +1710,7 @@ var usability_arr = usability_test != undefined ? [] : undefined;
 $(document).ready(function(){
 	//$('.modules-options').css('display','none')
 	// CHART - EXAMPLE/
-    obj = new Chart({
+  /*  obj = new Chart({
         width: $('.container').width() ,
         height: 400,
         margin: {top: 30, right: 40, left: 40, bottom: 25},
@@ -1724,9 +1724,9 @@ $(document).ready(function(){
         container: d3.select('.bigvis'),
         sci_notation: true,
         outlier: true
-    });
+    })
 	
-	/*
+	*/
 	// CHART
     obj = new Chart({
         width: $('.container').width() ,
@@ -1741,8 +1741,8 @@ $(document).ready(function(){
         selfDelay: 1000,
         container: d3.select('.bigvis'),
         sci_notation: false,
-        outlier: false
-    })*/
+        outlier: true
+    });
 	
     // MODULES
 
